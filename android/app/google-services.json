@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "790107190753",
+    "project_id": "devmob-edulycee",
+    "storage_bucket": "devmob-edulycee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:790107190753:android:aa1d9ed01343fbd5790ea0",
+        "android_client_info": {
+          "package_name": "com.example.devmob_edulycee"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJcmj92KdhEMGUoud4M2TTYFMgpIj4in4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
