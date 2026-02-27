@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // Import tes pages (à créer)
-import '../student/student_dashboard.dart';
+import '../student/screens/student_dashboard.dart';
 import '../teacher/teacher_dashboard.dart';
 import '../parent/parent_dashboard.dart';
 import '../admin/admin_dashboard.dart';
