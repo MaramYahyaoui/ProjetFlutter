@@ -2,19 +2,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Homework {
   final String id;
-  final String subject;
-  final String title;
+  final String classe;
+  final String matiere;
+  final String titre;
   final String description;
-  final Timestamp dueDate;
-  final bool isCompleted;
+  final Timestamp dateLimite;
+  final bool estRendu;
 
   Homework({
     required this.id,
-    required this.subject,
-    required this.title,
+    required this.classe,
+    required this.matiere,
+    required this.titre,
     required this.description,
-    required this.dueDate,
-    required this.isCompleted,
+    required this.dateLimite,
+    required this.estRendu,
   });
 
   factory Homework.fromFirestore(DocumentSnapshot doc) {
@@ -22,11 +24,18 @@ class Homework {
 
     return Homework(
       id: doc.id,
-      subject: data['subject'],
-      title: data['title'],
-      description: data['description'],
-      dueDate: data['dueDate'],
-      isCompleted: data['isCompleted'],
+      classe: data['classe'] ?? '',
+      matiere: data['matiere'] ?? '',
+      titre: data['titre'] ?? '',
+      description: data['description'] ?? '',
+      dateLimite: data['dateLimite'] ?? Timestamp.now(),
+      estRendu: data['estRendu'] ?? false,
     );
   }
+
+  // Getters for backward compatibility (optional)
+  String get subject => matiere;
+  String get title => titre;
+  Timestamp get dueDate => dateLimite;
+  bool get isCompleted => estRendu;
 }

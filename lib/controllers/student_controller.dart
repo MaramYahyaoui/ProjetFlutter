@@ -53,14 +53,15 @@ class StudentController extends ChangeNotifier {
 
   Future<void> loadHomeworks() async {
     final snapshot = await _firestore
-        .collection('homeworks')
-        .where('eleveId', isEqualTo: _uid)
-        .orderBy('dueDate')
+        .collection('devoirs')
         .get();
 
     _homeworks = snapshot.docs
         .map((doc) => Homework.fromFirestore(doc))
         .toList();
+    
+    // Sort by dateLimite in memory
+    _homeworks.sort((a, b) => a.dateLimite.compareTo(b.dateLimite));
   }
 
   Future<void> loadSchedules() async {
@@ -99,17 +100,18 @@ class StudentController extends ChangeNotifier {
       final newValue = !_homeworks[index].isCompleted;
 
       await _firestore
-          .collection('homeworks')
+          .collection('devoirs')
           .doc(id)
-          .update({'isCompleted': newValue});
+          .update({'estRendu': newValue});
 
       _homeworks[index] = Homework(
         id: _homeworks[index].id,
-        subject: _homeworks[index].subject,
-        title: _homeworks[index].title,
+        classe: _homeworks[index].classe,
+        matiere: _homeworks[index].matiere,
+        titre: _homeworks[index].titre,
         description: _homeworks[index].description,
-        dueDate: _homeworks[index].dueDate,
-        isCompleted: newValue,
+        dateLimite: _homeworks[index].dateLimite,
+        estRendu: newValue,
       );
 
       notifyListeners();
