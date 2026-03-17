@@ -36,11 +36,13 @@ class Schedule {
       subject: creneaux?['matiere'] ?? data['matiere'] ?? '',
       teacher: creneaux?['professeur'] ?? data['professeur'],
       classroom: creneaux?['salle'] ?? data['salle'] ?? '',
-      dayOfWeek: data['jour_semaine'] ?? 1,
+      // Handle both jour_semaine and jour_semain (typo in DB)
+      dayOfWeek: data['jour_semaine'] ?? data['jour_semain'] ?? 1,
       startTime: creneaux?['debut'] ?? data['debut'] ?? '08:00',
       endTime: creneaux?['fin'] ?? data['fin'] ?? '10:00',
       type: data['type'] ?? 'eleve',
-      ownerId: data['ownerId'] ?? data['professeurId'] ?? data['eleveId'],
+      // Handle both ownerId, eleveId, and professeurId
+      ownerId: data['ownerId'] ?? data['eleveId'] ?? data['professeurId'] ?? '',
       color: data['color'],
     );
   }

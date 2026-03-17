@@ -65,21 +65,42 @@ class StudentController extends ChangeNotifier {
   }
 
   Future<void> loadSchedules() async {
-    final snapshot = await _firestore
-        .collection('emplois') // ✅ Fixed: was 'schedules'
-        .where('type', isEqualTo: 'eleve') // ✅ Added type filter
-        .where('ownerId', isEqualTo: _uid) // ✅ Fixed: was 'eleveId'
-        .orderBy('jour_semaine')
-        .orderBy('debut')
-        .get();
+    try {
+      final snapshot = await _firestore
+          .collection('emplois')
+          .get();
 
-    final Map<int, List<Schedule>> grouped = {};
+      final Map<String, List<Schedule>> grouped = {};
+      const days = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
-    for (var doc in snapshot.docs) {
-      final schedule = Schedule.fromFirestore(doc);
-      // ✅ Fixed: dayOfWeek is already int, no parsing needed
-      grouped.putIfAbsent(schedule.dayOfWeek, () => []);
-      grouped[schedule.dayOfWeek]!.add(schedule); // ✅ Fixed: was schedule.day
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        print('Schedule doc: ${doc.id} - $data'); // Debug log
+        
+        final schedule = Schedule.fromFirestore(doc);
+        print('Parsed: ownerId=${schedule.ownerId}, dayOfWeek=${schedule.dayOfWeek}, subject=${schedule.subject}');
+        
+        // Filter by ownerId in memory - show all if ownerId is empty (for testing)
+        final ownerId = schedule.ownerId ?? '';
+        if (ownerId.isNotEmpty && ownerId != _uid) {
+          print('Skipping - ownerId mismatch: $ownerId != $_uid');
+          continue;
+        }
+        
+        final dayName = days[schedule.dayOfWeek];
+        grouped.putIfAbsent(dayName, () => []);
+        grouped[dayName]!.add(schedule);
+      }
+
+      // Sort schedules by time within each day
+      for (var day in grouped.keys) {
+        grouped[day]!.sort((a, b) => a.startTime.compareTo(b.startTime));
+      }
+
+      _schedules = grouped;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading schedules: $e');
     }
   }
 

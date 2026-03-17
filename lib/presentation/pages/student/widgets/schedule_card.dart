@@ -63,7 +63,7 @@ class ScheduleCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      schedule.teacher,
+                      schedule.teacher ?? '',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
