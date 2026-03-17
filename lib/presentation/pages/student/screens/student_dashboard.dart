@@ -774,14 +774,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     fontSize: 15,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  course.teacher,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 13,
-                  ),
-                ),
+              
                 const SizedBox(height: 4),
                 Row(
                   children: [

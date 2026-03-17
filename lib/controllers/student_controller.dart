@@ -66,19 +66,21 @@ class StudentController extends ChangeNotifier {
 
   Future<void> loadSchedules() async {
     final snapshot = await _firestore
-        .collection('schedules')
-        .where('eleveId', isEqualTo: _uid)
+        .collection('emplois') // ✅ Fixed: was 'schedules'
+        .where('type', isEqualTo: 'eleve') // ✅ Added type filter
+        .where('ownerId', isEqualTo: _uid) // ✅ Fixed: was 'eleveId'
+        .orderBy('jour_semaine')
+        .orderBy('debut')
         .get();
 
-    final Map<String, List<Schedule>> grouped = {};
+    final Map<int, List<Schedule>> grouped = {};
 
     for (var doc in snapshot.docs) {
       final schedule = Schedule.fromFirestore(doc);
-      grouped.putIfAbsent(schedule.day, () => []);
-      grouped[schedule.day]!.add(schedule);
+      // ✅ Fixed: dayOfWeek is already int, no parsing needed
+      grouped.putIfAbsent(schedule.dayOfWeek, () => []);
+      grouped[schedule.dayOfWeek]!.add(schedule); // ✅ Fixed: was schedule.day
     }
-
-    _schedules = grouped;
   }
 
   double getAverage() {
