@@ -17,6 +17,9 @@ dependencies:
   # State management
   flutter_bloc: ^9.1.1
 
+  # File picker
+  file_picker: ^8.0.0+1
+
   # Cupertino icons (iOS style icons)
   cupertino_icons: ^1.0.8
 

@@ -140,4 +140,55 @@ class StudentController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> addHomework({
+    required String matiere,
+    required String titre,
+    required String description,
+    required DateTime dateLimite,
+    String? attachmentName,
+    String? attachmentType,
+    int? attachmentSize,
+  }) async {
+    // Get user's class from Firestore or use a default
+    final userDoc = await _firestore.collection('users').doc(_uid).get();
+    final userData = userDoc.data();
+    final classe = userData?['classe'] ?? 'Default Class';
+
+    // Build fichier map if attachment exists
+    Map<String, dynamic>? fichier;
+    if (attachmentName != null) {
+      fichier = {
+        'nom': attachmentName,
+        'url': '', // No URL since we're not using Firebase Storage
+        'type': attachmentType ?? 'application/octet-stream',
+        'taille': attachmentSize ?? 0,
+      };
+    }
+
+    final docRef = await _firestore.collection('devoirs').add({
+      'classe': classe,
+      'matiere': matiere,
+      'titre': titre,
+      'description': description,
+      'dateLimite': Timestamp.fromDate(dateLimite),
+      'estRendu': false,
+      if (fichier != null) 'fichier': fichier,
+    });
+
+    // Add to local list
+    final newHomework = Homework(
+      id: docRef.id,
+      classe: classe,
+      matiere: matiere,
+      titre: titre,
+      description: description,
+      dateLimite: Timestamp.fromDate(dateLimite),
+      estRendu: false,
+    );
+
+    _homeworks.insert(0, newHomework);
+    _homeworks.sort((a, b) => a.dateLimite.compareTo(b.dateLimite));
+    notifyListeners();
+  }
 }
