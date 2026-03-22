@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import 'classes/classes_page.dart';
+import 'timetable/timetable_page.dart';
 import 'users/users_page.dart';
 
 class AdminDashboard extends StatelessWidget {
@@ -305,11 +307,11 @@ class AdminDashboard extends StatelessWidget {
                       action: _QuickActionAction.classes,
                     ),
                     _QuickActionData(
-                      label: 'Rapports',
-                      icon: Icons.description_outlined,
+                      label: 'Emploi\ndu temps',
+                      icon: Icons.schedule_outlined,
                       bg: Color(0xFFE9F7EE),
                       fg: Color(0xFF22C55E),
-                      action: _QuickActionAction.reports,
+                      action: _QuickActionAction.timetable,
                     ),
                     _QuickActionData(
                       label: 'Paramètres',
@@ -329,7 +331,7 @@ class AdminDashboard extends StatelessWidget {
   }
 }
 
-enum _QuickActionAction { users, classes, reports, settings }
+enum _QuickActionAction { users, classes, timetable, settings }
 
 class _Header extends StatelessWidget {
   final String title;
@@ -453,7 +455,15 @@ class _QuickActionsCard extends StatelessWidget {
         ).push(MaterialPageRoute(builder: (_) => const AdminUsersPage()));
         return;
       case _QuickActionAction.classes:
-      case _QuickActionAction.reports:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const AdminClassesPage()));
+        return;
+      case _QuickActionAction.timetable:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const AdminTimetablePage()));
+        return;
       case _QuickActionAction.settings:
         return;
     }

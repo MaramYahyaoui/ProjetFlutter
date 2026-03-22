@@ -57,6 +57,7 @@ class StudentController extends ChangeNotifier {
 
   Future<void> loadSchedules() async {
     try {
+      final myClasse = await _loadMyClasse();
       final snapshot = await _firestore.collection('emplois').get();
 
       final Map<String, List<Schedule>> grouped = {};
@@ -74,6 +75,14 @@ class StudentController extends ChangeNotifier {
       for (var doc in snapshot.docs) {
         final data = doc.data();
         print('Schedule doc: ${doc.id} - $data'); // Debug log
+
+        final docClasse = (data['classe'] ?? '').toString().trim();
+        if (myClasse != null &&
+            myClasse.trim().isNotEmpty &&
+            docClasse.isNotEmpty &&
+            docClasse != myClasse.trim()) {
+          continue;
+        }
 
         final schedule = Schedule.fromFirestore(doc);
         print(
@@ -102,6 +111,23 @@ class StudentController extends ChangeNotifier {
     } catch (e) {
       print('Error loading schedules: $e');
     }
+  }
+
+  Future<String?> _loadMyClasse() async {
+    try {
+      final doc1 = await _firestore.collection('utilisateurs').doc(_uid).get();
+      final data1 = doc1.data();
+      final c1 = (data1?['classe'] ?? data1?['class'])?.toString().trim();
+      if (c1 != null && c1.isNotEmpty) return c1;
+
+      final doc2 = await _firestore.collection('users').doc(_uid).get();
+      final data2 = doc2.data();
+      final c2 = (data2?['classe'] ?? data2?['class'])?.toString().trim();
+      if (c2 != null && c2.isNotEmpty) return c2;
+    } catch (_) {
+      // Ignore and fall back to showing schedules without class filtering.
+    }
+    return null;
   }
 
   double getAverage() {
