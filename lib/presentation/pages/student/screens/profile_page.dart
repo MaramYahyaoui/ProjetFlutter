@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../notifications/notifications_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -63,7 +64,13 @@ class ProfilePage extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.notifications_outlined,
                                 color: Colors.white, size: 24),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsPage(),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -303,7 +310,13 @@ class ProfilePage extends StatelessWidget {
                             Icons.notifications_outlined,
                             'Notifications',
                             const Color(0xFFFF6B35),
-                            () {},
+                            () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsPage(),
+                                ),
+                              );
+                            },
                           ),
                           _buildDivider(),
                           _buildMenuOption(

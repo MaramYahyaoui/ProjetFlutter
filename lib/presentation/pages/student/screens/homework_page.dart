@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../controllers/student_controller.dart';
 import '../../../../models/homework_model.dart';
+import '../../notifications/notifications_page.dart';
 
 class HomeworkPage extends StatefulWidget {
   const HomeworkPage({super.key});
@@ -13,7 +14,7 @@ class HomeworkPage extends StatefulWidget {
 
 class _HomeworkPageState extends State<HomeworkPage> {
   String _selectedFilter = 'Tous';
-  
+
   final List<String> _filters = ['Tous', 'À faire', 'Rendus'];
 
   // Form key for validation
@@ -108,8 +109,17 @@ class _HomeworkPageState extends State<HomeworkPage> {
             centerTitle: true,
             actions: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
-                onPressed: () {},
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.black87,
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsPage(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -118,7 +128,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
               // ===== STATISTICS ROW =====
               Container(
                 color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     // Total
@@ -176,16 +189,20 @@ class _HomeworkPageState extends State<HomeworkPage> {
                           decoration: BoxDecoration(
                             color: isSelected ? Colors.blue : Colors.white,
                             borderRadius: BorderRadius.circular(25),
-                            border: isSelected 
-                                ? null 
+                            border: isSelected
+                                ? null
                                 : Border.all(color: Colors.grey[300]!),
                           ),
                           child: Text(
                             filter,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.grey[700],
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.grey[700],
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                               fontSize: 14,
                             ),
                           ),
@@ -224,7 +241,8 @@ class _HomeworkPageState extends State<HomeworkPage> {
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: filteredHomeworks.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final homework = filteredHomeworks[index];
                           return _buildHomeworkCard(homework);
@@ -281,9 +299,13 @@ class _HomeworkPageState extends State<HomeworkPage> {
 
   Widget _buildHomeworkCard(Homework homework) {
     final dateStr = _formatDate(homework.dueDate.toDate());
-    final isLate = homework.dueDate.toDate().isBefore(DateTime.now()) && !homework.isCompleted;
+    final isLate =
+        homework.dueDate.toDate().isBefore(DateTime.now()) &&
+        !homework.isCompleted;
     final subjectColor = _subjectColors[homework.subject] ?? Colors.blue;
-    final subjectAbbr = _subjectAbbr[homework.subject] ?? homework.subject.substring(0, 2).toUpperCase();
+    final subjectAbbr =
+        _subjectAbbr[homework.subject] ??
+        homework.subject.substring(0, 2).toUpperCase();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -351,7 +373,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
                     // Status badge
                     if (isLate)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red[50],
                           borderRadius: BorderRadius.circular(6),
@@ -473,7 +498,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey[300]!),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                       items: _matieres.map((matiere) {
                         return DropdownMenuItem(
@@ -519,7 +547,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey[300]!),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -555,7 +586,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey[300]!),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -580,9 +614,13 @@ class _HomeworkPageState extends State<HomeworkPage> {
                       onTap: () async {
                         final date = await showDatePicker(
                           context: context,
-                          initialDate: DateTime.now().add(const Duration(days: 7)),
+                          initialDate: DateTime.now().add(
+                            const Duration(days: 7),
+                          ),
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
@@ -604,7 +642,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey[50],
                           borderRadius: BorderRadius.circular(12),
@@ -612,14 +653,20 @@ class _HomeworkPageState extends State<HomeworkPage> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_today, color: Colors.grey, size: 20),
+                            const Icon(
+                              Icons.calendar_today,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
                             const SizedBox(width: 12),
                             Text(
                               _selectedDate != null
                                   ? '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}'
                                   : 'Sélectionner la date de rendu',
                               style: TextStyle(
-                                color: _selectedDate != null ? Colors.black87 : Colors.grey[600],
+                                color: _selectedDate != null
+                                    ? Colors.black87
+                                    : Colors.grey[600],
                                 fontSize: 15,
                               ),
                             ),
@@ -642,7 +689,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
                     InkWell(
                       onTap: _pickAttachment,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey[50],
                           borderRadius: BorderRadius.circular(12),
@@ -650,13 +700,20 @@ class _HomeworkPageState extends State<HomeworkPage> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.attach_file, color: Colors.blue, size: 20),
+                            const Icon(
+                              Icons.attach_file,
+                              color: Colors.blue,
+                              size: 20,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                _attachmentFileName ?? 'Ajouter une pièce jointe (PDF, Image)',
+                                _attachmentFileName ??
+                                    'Ajouter une pièce jointe (PDF, Image)',
                                 style: TextStyle(
-                                  color: _attachmentFileName != null ? Colors.black87 : Colors.grey[600],
+                                  color: _attachmentFileName != null
+                                      ? Colors.black87
+                                      : Colors.grey[600],
                                   fontSize: 15,
                                 ),
                               ),
@@ -669,7 +726,11 @@ class _HomeworkPageState extends State<HomeworkPage> {
                                     _selectedFile = null;
                                   });
                                 },
-                                icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.grey,
+                                  size: 18,
+                                ),
                               ),
                           ],
                         ),
@@ -731,14 +792,13 @@ class _HomeworkPageState extends State<HomeworkPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Colors.blue),
-      ),
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: Colors.blue)),
     );
 
     try {
       final controller = context.read<StudentController>();
-      
+
       // Save file metadata directly to Firestore (no upload to Firebase Storage)
       await controller.addHomework(
         matiere: _selectedMatiere!,
@@ -792,7 +852,7 @@ class _HomeworkPageState extends State<HomeworkPage> {
 
       if (result != null && result.files.isNotEmpty) {
         setState(() {
-          _selectedFile = result!.files.single;
+          _selectedFile = result.files.single;
           _attachmentFileName = _selectedFile!.name;
         });
       }

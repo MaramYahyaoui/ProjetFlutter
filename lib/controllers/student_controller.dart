@@ -1,4 +1,3 @@
-import 'package:devmob_edulycee/models/emploi.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +8,6 @@ import '../models/emploi.dart';
 class StudentController extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
-
 
   List<Note> _notes = [];
   List<Homework> _homeworks = [];
@@ -30,11 +28,7 @@ class StudentController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    await Future.wait([
-      loadNotes(),
-      loadHomeworks(),
-      loadSchedules(),
-    ]);
+    await Future.wait([loadNotes(), loadHomeworks(), loadSchedules()]);
 
     _isLoading = false;
     notifyListeners();
@@ -47,46 +41,52 @@ class StudentController extends ChangeNotifier {
         .orderBy('date', descending: true)
         .get();
 
-    _notes =
-        snapshot.docs.map((doc) => Note.fromFirestore(doc)).toList();
+    _notes = snapshot.docs.map((doc) => Note.fromFirestore(doc)).toList();
   }
 
   Future<void> loadHomeworks() async {
-    final snapshot = await _firestore
-        .collection('devoirs')
-        .get();
+    final snapshot = await _firestore.collection('devoirs').get();
 
     _homeworks = snapshot.docs
         .map((doc) => Homework.fromFirestore(doc))
         .toList();
-    
+
     // Sort by dateLimite in memory
     _homeworks.sort((a, b) => a.dateLimite.compareTo(b.dateLimite));
   }
 
   Future<void> loadSchedules() async {
     try {
-      final snapshot = await _firestore
-          .collection('emplois')
-          .get();
+      final snapshot = await _firestore.collection('emplois').get();
 
       final Map<String, List<Schedule>> grouped = {};
-      const days = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+      const days = [
+        '',
+        'Lundi',
+        'Mardi',
+        'Mercredi',
+        'Jeudi',
+        'Vendredi',
+        'Samedi',
+        'Dimanche',
+      ];
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
         print('Schedule doc: ${doc.id} - $data'); // Debug log
-        
+
         final schedule = Schedule.fromFirestore(doc);
-        print('Parsed: ownerId=${schedule.ownerId}, dayOfWeek=${schedule.dayOfWeek}, subject=${schedule.subject}');
-        
+        print(
+          'Parsed: ownerId=${schedule.ownerId}, dayOfWeek=${schedule.dayOfWeek}, subject=${schedule.subject}',
+        );
+
         // Filter by ownerId in memory - show all if ownerId is empty (for testing)
         final ownerId = schedule.ownerId ?? '';
         if (ownerId.isNotEmpty && ownerId != _uid) {
           print('Skipping - ownerId mismatch: $ownerId != $_uid');
           continue;
         }
-        
+
         final dayName = days[schedule.dayOfWeek];
         grouped.putIfAbsent(dayName, () => []);
         grouped[dayName]!.add(schedule);
@@ -106,8 +106,7 @@ class StudentController extends ChangeNotifier {
 
   double getAverage() {
     if (_notes.isEmpty) return 0;
-    final sum =
-        _notes.fold<double>(0, (sum, n) => sum + n.percentage);
+    final sum = _notes.fold<double>(0, (sum, n) => sum + n.percentage);
     return sum / _notes.length;
   }
 
@@ -122,10 +121,9 @@ class StudentController extends ChangeNotifier {
     if (index != -1) {
       final newValue = !_homeworks[index].isCompleted;
 
-      await _firestore
-          .collection('devoirs')
-          .doc(id)
-          .update({'estRendu': newValue});
+      await _firestore.collection('devoirs').doc(id).update({
+        'estRendu': newValue,
+      });
 
       _homeworks[index] = Homework(
         id: _homeworks[index].id,

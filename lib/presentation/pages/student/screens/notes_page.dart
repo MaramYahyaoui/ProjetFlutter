@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../controllers/student_controller.dart';
 import '../../../../models/note_model.dart';
+import '../../notifications/notifications_page.dart';
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
@@ -12,9 +13,12 @@ class NotesPage extends StatefulWidget {
 
 class _NotesPageState extends State<NotesPage> {
   String _selectedTrimester = 'Trimestre 1';
-  String _selectedFilter = 'Toutes';
 
-  final List<String> _trimesters = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+  final List<String> _trimesters = [
+    'Trimestre 1',
+    'Trimestre 2',
+    'Trimestre 3',
+  ];
 
   // Subject color mapping
   final Map<String, Color> _subjectColors = {
@@ -52,7 +56,8 @@ class _NotesPageState extends State<NotesPage> {
     // Calculate subject averages
     final List<Map<String, dynamic>> subjectStats = [];
     notesBySubject.forEach((subject, notes) {
-      final avg = notes.map((n) => n.note).reduce((a, b) => a + b) / notes.length;
+      final avg =
+          notes.map((n) => n.note).reduce((a, b) => a + b) / notes.length;
       subjectStats.add({
         'subject': subject,
         'average': avg,
@@ -65,7 +70,8 @@ class _NotesPageState extends State<NotesPage> {
     // Calculate general average
     double generalAverage = 0;
     if (allNotes.isNotEmpty) {
-      generalAverage = allNotes.map((n) => n.note).reduce((a, b) => a + b) / allNotes.length;
+      generalAverage =
+          allNotes.map((n) => n.note).reduce((a, b) => a + b) / allNotes.length;
     }
 
     // Calculate percentage for circular progress (assuming 20 is max)
@@ -93,8 +99,17 @@ class _NotesPageState extends State<NotesPage> {
           Stack(
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
-                onPressed: () {},
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.black87,
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsPage(),
+                    ),
+                  );
+                },
               ),
               Positioned(
                 right: 8,
@@ -152,7 +167,9 @@ class _NotesPageState extends State<NotesPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: isSelected ? Colors.white : Colors.grey[600],
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                           fontSize: 14,
                         ),
                       ),
@@ -178,10 +195,7 @@ class _NotesPageState extends State<NotesPage> {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF4A90E2),
-                            Color(0xFF357ABD),
-                          ],
+                          colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
@@ -213,7 +227,8 @@ class _NotesPageState extends State<NotesPage> {
                                     ),
                                     const SizedBox(height: 8),
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         Text(
                                           generalAverage.toStringAsFixed(1),
@@ -336,13 +351,14 @@ class _NotesPageState extends State<NotesPage> {
                     physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: subjectStats.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final stat = subjectStats[index];
                       final average = stat['average'] as double;
                       final isExcellent = average >= 14;
                       final isGood = average >= 10 && average < 14;
-                      
+
                       return Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -363,7 +379,9 @@ class _NotesPageState extends State<NotesPage> {
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: (stat['color'] as Color).withOpacity(0.15),
+                                color: (stat['color'] as Color).withOpacity(
+                                  0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Center(
@@ -418,28 +436,30 @@ class _NotesPageState extends State<NotesPage> {
                                 Row(
                                   children: [
                                     Icon(
-                                      isExcellent ? Icons.trending_up : Icons.remove,
+                                      isExcellent
+                                          ? Icons.trending_up
+                                          : Icons.remove,
                                       size: 14,
-                                      color: isExcellent 
-                                          ? Colors.green 
-                                          : isGood 
-                                              ? Colors.orange 
-                                              : Colors.red,
+                                      color: isExcellent
+                                          ? Colors.green
+                                          : isGood
+                                          ? Colors.orange
+                                          : Colors.red,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      isExcellent 
-                                          ? 'Excellent' 
-                                          : isGood 
-                                              ? 'Moyen' 
-                                              : 'À améliorer',
+                                      isExcellent
+                                          ? 'Excellent'
+                                          : isGood
+                                          ? 'Moyen'
+                                          : 'À améliorer',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: isExcellent 
-                                            ? Colors.green 
-                                            : isGood 
-                                                ? Colors.orange 
-                                                : Colors.red,
+                                        color: isExcellent
+                                            ? Colors.green
+                                            : isGood
+                                            ? Colors.orange
+                                            : Colors.red,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),

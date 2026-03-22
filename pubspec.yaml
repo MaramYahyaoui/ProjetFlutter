@@ -15,6 +15,9 @@ dependencies:
 
 
   # State management
+  provider: ^6.1.2
+
+  # State management (currently unused in lib/)
   flutter_bloc: ^9.1.1
 
   # File picker

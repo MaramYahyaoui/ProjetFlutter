@@ -8,6 +8,7 @@ import '../screens/notes_page.dart';
 import '../screens/schedule_page.dart';
 import '../screens/homework_page.dart';
 import '../screens/profile_page.dart';
+import '../../notifications/notifications_page.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -207,7 +208,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             IconButton(
                               icon: const Icon(Icons.notifications_outlined,
                                   color: Colors.white, size: 28),
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const NotificationsPage(),
+                                  ),
+                                );
+                              },
                             ),
                             if (pendingHomeworks.isNotEmpty)
                               Positioned(
