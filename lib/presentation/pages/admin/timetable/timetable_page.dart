@@ -76,15 +76,6 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
           }
 
           final docs = usersSnapshot.data!.docs;
-          final teacherNameById = <String, String>{
-            for (final d in docs)
-              d.id:
-                  (d.data()['nom'] ??
-                          d.data()['name'] ??
-                          d.data()['displayName'] ??
-                          d.id)
-                      .toString(),
-          };
 
           final teachers =
               docs

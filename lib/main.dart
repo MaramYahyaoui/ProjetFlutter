@@ -7,26 +7,23 @@ import 'controllers/student_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(MyApp());
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => StudentController()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => StudentController())],
       child: MaterialApp(
         title: 'DevMob Edulycée',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-        ),
-        home: LoginPage(),
+        theme: ThemeData(primarySwatch: Colors.blue),
+        routes: {'/login': (_) => const LoginPage()},
+        home: const LoginPage(),
       ),
     );
   }

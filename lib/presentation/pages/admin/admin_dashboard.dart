@@ -561,7 +561,6 @@ class _StatData {
   final String label;
   final String sublabel;
   final Color accent;
-  final String? badge;
 
   const _StatData({
     required this.icon,
@@ -569,7 +568,6 @@ class _StatData {
     required this.label,
     required this.sublabel,
     required this.accent,
-    this.badge,
   });
 }
 
@@ -641,25 +639,6 @@ class _StatCard extends StatelessWidget {
                 child: Icon(data.icon, color: data.accent, size: 18),
               ),
               const Spacer(),
-              if (data.badge != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE9F7EE),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '↗ ${data.badge}',
-                    style: const TextStyle(
-                      color: Color(0xFF22C55E),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 14),

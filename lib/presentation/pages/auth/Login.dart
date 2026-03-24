@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../student/screens/student_dashboard.dart';
 import '../teacher/teacher_dashboard.dart';
 import '../parent/parent_dashboard.dart';
-import '../admin/admin_dashboard.dart';
+import '../admin/admin_shell.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // 2. Récupérer le rôle depuis Firestore (collection "utilisateurs")
       final userDoc = await _firestore
-          .collection('utilisateurs')  // ← "utilisateurs" pas "users"
+          .collection('utilisateurs') // ← "utilisateurs" pas "users"
           .doc(userCredential.user!.uid)
           .get();
 
@@ -58,7 +58,8 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       final userData = userDoc.data()!;
-      final String role = userData['role'] ?? 'eleve';  // ← "eleve" pas "student"
+      final String role =
+          userData['role'] ?? 'eleve'; // ← "eleve" pas "student"
 
       // 3. Vérifier si le rôle sélectionné correspond (optionnel)
       if (selectedRole != null && selectedRole != role) {
@@ -69,10 +70,9 @@ class _LoginPageState extends State<LoginPage> {
 
       // 4. Rediriger selon le rôle
       navigateToDashboard(role);
-
     } on FirebaseAuthException catch (e) {
       String message = "Erreur de connexion";
-      
+
       // Gestion détaillée des erreurs Firebase Auth
       switch (e.code) {
         case 'user-not-found':
@@ -100,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
           message = "Erreur de connexion: ${e.code}";
           print("Firebase Auth Error: ${e.code} - ${e.message}");
       }
-      
+
       showError(message);
     } catch (e) {
       print("Erreur générale: $e");
@@ -112,19 +112,19 @@ class _LoginPageState extends State<LoginPage> {
 
   void navigateToDashboard(String role) {
     Widget dashboard;
-    
+
     switch (role) {
       case 'eleve':
         dashboard = const StudentDashboard();
         break;
-      case 'enseignant':  // Corrigé: "enseignant" au lieu de "professeur"
+      case 'enseignant': // Corrigé: "enseignant" au lieu de "professeur"
         dashboard = const TeacherDashboard();
         break;
       case 'parent':
         dashboard = const ParentDashboard();
         break;
       case 'admin':
-        dashboard = const AdminDashboard();
+        dashboard = const AdminShell();
         break;
       default:
         dashboard = const StudentDashboard();
@@ -138,10 +138,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -272,7 +269,9 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           child: isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
                               : const Text(
                                   "Se connecter",
                                   style: TextStyle(fontSize: 16),

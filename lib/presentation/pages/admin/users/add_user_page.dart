@@ -26,6 +26,82 @@ class _AddUserPageState extends State<AddUserPage> {
   bool _loading = false;
   bool _obscure = true;
 
+  String? _validateStrongPassword({
+    required String password,
+    required String email,
+    required String firstName,
+    required String lastName,
+  }) {
+    if (password.isEmpty) return 'Champ requis';
+
+    // Avoid surprises with passwords copied with spaces/newlines.
+    if (RegExp(r'\s').hasMatch(password)) {
+      return "Le mot de passe ne doit pas contenir d'espaces";
+    }
+
+    if (password.length < 12) {
+      return 'Min 12 caractères';
+    }
+
+    if (!RegExp(r'[a-z]').hasMatch(password)) {
+      return 'Ajoutez au moins une minuscule';
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(password)) {
+      return 'Ajoutez au moins une majuscule';
+    }
+    if (!RegExp(r'\d').hasMatch(password)) {
+      return 'Ajoutez au moins un chiffre';
+    }
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(password)) {
+      return 'Ajoutez au moins un caractère spécial';
+    }
+
+    final lowered = password.toLowerCase();
+
+    // Very common/weak passwords denylist (small on purpose).
+    const banned = <String>{
+      'password',
+      'motdepasse',
+      'azerty',
+      'qwerty',
+      'admin',
+      '123456',
+      '123456789',
+      '000000',
+      '111111',
+      'abcdef',
+    };
+    if (banned.contains(lowered)) {
+      return 'Mot de passe trop courant';
+    }
+
+    // Reject trivial repetition like aaaaaaaaaaaa
+    if (RegExp(r'^(.)\1{7,}$').hasMatch(password)) {
+      return 'Évitez les caractères répétés';
+    }
+
+    // Avoid passwords derived from identity info.
+    final emailValue = email.trim().toLowerCase();
+    final localPart = emailValue.contains('@')
+        ? emailValue.split('@').first
+        : emailValue;
+    if (localPart.length >= 3 && lowered.contains(localPart)) {
+      return "N'utilisez pas votre email dans le mot de passe";
+    }
+
+    final fn = firstName.trim().toLowerCase();
+    if (fn.length >= 3 && lowered.contains(fn)) {
+      return "N'utilisez pas votre prénom dans le mot de passe";
+    }
+
+    final ln = lastName.trim().toLowerCase();
+    if (ln.length >= 3 && lowered.contains(ln)) {
+      return "N'utilisez pas votre nom dans le mot de passe";
+    }
+
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -91,7 +167,8 @@ class _AddUserPageState extends State<AddUserPage> {
       final msg = switch (e.code) {
         'email-already-in-use' => "Cet email est déjà utilisé",
         'invalid-email' => "Email invalide",
-        'weak-password' => "Mot de passe trop faible",
+        'weak-password' =>
+          "Mot de passe trop faible (12+ caractères, maj/min/chiffre/spécial)",
         _ => "Erreur: ${e.code}",
       };
 
@@ -245,10 +322,12 @@ class _AddUserPageState extends State<AddUserPage> {
                     ),
                   ),
                   validator: (v) {
-                    final value = (v ?? '');
-                    if (value.isEmpty) return 'Champ requis';
-                    if (value.length < 6) return 'Min 6 caractères';
-                    return null;
+                    return _validateStrongPassword(
+                      password: (v ?? ''),
+                      email: _emailController.text,
+                      firstName: _firstNameController.text,
+                      lastName: _lastNameController.text,
+                    );
                   },
                 ),
               ),

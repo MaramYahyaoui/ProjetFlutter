@@ -9,7 +9,9 @@ class ProfilePage extends StatelessWidget {
     try {
       await FirebaseAuth.instance.signOut();
       if (context.mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (e) {
       if (context.mounted) {
@@ -62,8 +64,11 @@ class ProfilePage extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.notifications_outlined,
-                                color: Colors.white, size: 24),
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -397,10 +402,7 @@ class ProfilePage extends StatelessWidget {
                     Center(
                       child: Text(
                         'Edulycee v1.0 • Build 202301',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
                       ),
                     ),
 
@@ -429,17 +431,18 @@ class ProfilePage extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12),
         ),
       ],
     );
   }
 
   Widget _buildInfoItem(
-      IconData icon, String label, String value, Color color) {
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -459,10 +462,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -481,7 +481,11 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildMenuOption(
-      IconData icon, String label, Color color, VoidCallback onTap) {
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
