@@ -19,11 +19,18 @@ class _AddUserPageState extends State<AddUserPage> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _classController = TextEditingController();
 
   String _role = 'eleve';
+  String? _selectedClass;
+  late final Future<List<String>> _classesFuture;
   bool _loading = false;
   bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _classesFuture = _loadClasses();
+  }
 
   @override
   void dispose() {
@@ -31,7 +38,6 @@ class _AddUserPageState extends State<AddUserPage> {
     _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _classController.dispose();
     super.dispose();
   }
 
@@ -71,7 +77,7 @@ class _AddUserPageState extends State<AddUserPage> {
         'prenom': firstName,
         'nom': lastName,
         'displayName': displayName,
-        'classe': _classController.text.trim(),
+        'classe': (_selectedClass ?? '').trim(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -122,6 +128,40 @@ class _AddUserPageState extends State<AddUserPage> {
       name: 'Secondary',
       options: DefaultFirebaseOptions.currentPlatform,
     );
+  }
+
+  Future<List<String>> _loadClasses() async {
+    final firestore = FirebaseFirestore.instance;
+    final classNames = <String>{};
+
+    try {
+      final snap = await firestore.collection('classes').orderBy('name').get();
+      for (final d in snap.docs) {
+        final data = d.data();
+        final name = ((data['name'] ?? d.id) ?? '').toString().trim();
+        if (name.isNotEmpty) classNames.add(name);
+      }
+    } catch (_) {
+      // ignore - fallback below
+    }
+
+    // Fallback for existing data where classes are only present on user docs.
+    if (classNames.isEmpty) {
+      final usersSnap = await firestore
+          .collection('utilisateurs')
+          .limit(500)
+          .get();
+      for (final d in usersSnap.docs) {
+        final data = d.data();
+        final name = ((data['classe'] ?? data['class']) ?? '')
+            .toString()
+            .trim();
+        if (name.isNotEmpty) classNames.add(name);
+      }
+    }
+
+    final list = classNames.toList()..sort((a, b) => a.compareTo(b));
+    return list;
   }
 
   @override
@@ -232,11 +272,46 @@ class _AddUserPageState extends State<AddUserPage> {
               ),
               const SizedBox(height: 12),
               _Field(
-                label: 'Classe (optionnel)',
-                child: TextFormField(
-                  controller: _classController,
-                  textInputAction: TextInputAction.done,
-                  decoration: _inputDecoration('2nde A'),
+                label: _role == 'eleve' ? 'Classe' : 'Classe (optionnel)',
+                child: FutureBuilder<List<String>>(
+                  future: _classesFuture,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const SizedBox(
+                        height: 48,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    final classes = snapshot.data ?? const <String>[];
+
+                    return DropdownButtonFormField<String>(
+                      value: _selectedClass,
+                      decoration: _inputDecoration(''),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('-'),
+                        ),
+                        ...classes.map(
+                          (c) => DropdownMenuItem<String>(
+                            value: c,
+                            child: Text(c),
+                          ),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() => _selectedClass = v),
+                      validator: (v) {
+                        if (_role != 'eleve') return null;
+                        final value = (v ?? '').trim();
+                        if (value.isEmpty) return 'Champ requis';
+                        return null;
+                      },
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 20),

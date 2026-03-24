@@ -26,133 +26,224 @@ class AdminClassesPage extends StatelessWidget {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Ajouter une classe',
+            icon: const Icon(Icons.add, color: Colors.black87),
+            onPressed: () => _showAddClassDialog(context),
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('utilisateurs')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
+        stream: FirebaseFirestore.instance.collection('classes').snapshots(),
+        builder: (context, classesSnapshot) {
+          if (classesSnapshot.hasError) {
             return _CenteredMessage(
               icon: Icons.error_outline,
               title: 'Erreur',
-              message: snapshot.error.toString(),
+              message: classesSnapshot.error.toString(),
             );
           }
 
-          if (!snapshot.hasData) {
+          if (!classesSnapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final users = snapshot.data!.docs.map((d) => d.data()).toList();
+          final storedClasses = <String>{
+            for (final d in classesSnapshot.data!.docs)
+              ((d.data()['name'] ?? d.id) ?? '').toString().trim(),
+          }..removeWhere((c) => c.isEmpty);
 
-          final Map<String, int> classToStudentCount = {};
-          for (final u in users) {
-            final rawRole = (u['role'] ?? u['type'] ?? '')
-                .toString()
-                .toLowerCase();
-            final isStudent =
-                rawRole.contains('eleve') ||
-                rawRole.contains('élève') ||
-                rawRole == 'student';
-            if (!isStudent) continue;
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('utilisateurs')
+                .snapshots(),
+            builder: (context, usersSnapshot) {
+              if (usersSnapshot.hasError) {
+                return _CenteredMessage(
+                  icon: Icons.error_outline,
+                  title: 'Erreur',
+                  message: usersSnapshot.error.toString(),
+                );
+              }
 
-            final classe = (u['classe'] ?? u['class'] ?? '').toString().trim();
-            if (classe.isEmpty) continue;
+              if (!usersSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            classToStudentCount.update(classe, (v) => v + 1, ifAbsent: () => 1);
-          }
+              final users = usersSnapshot.data!.docs
+                  .map((d) => d.data())
+                  .toList();
 
-          final classes = classToStudentCount.entries.toList()
-            ..sort((a, b) => a.key.compareTo(b.key));
+              final Map<String, int> classToStudentCount = {};
+              for (final u in users) {
+                final rawRole = (u['role'] ?? u['type'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                final isStudent =
+                    rawRole.contains('eleve') ||
+                    rawRole.contains('élève') ||
+                    rawRole == 'student';
+                if (!isStudent) continue;
 
-          if (classes.isEmpty) {
-            return const _CenteredMessage(
-              icon: Icons.apartment_outlined,
-              title: 'Aucune classe',
-              message:
-                  "Aucune classe n'a été trouvée dans la collection utilisateurs.",
-            );
-          }
+                final classe = (u['classe'] ?? u['class'] ?? '')
+                    .toString()
+                    .trim();
+                if (classe.isEmpty) continue;
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            itemBuilder: (context, index) {
-              final entry = classes[index];
-              return InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          AdminTimetablePage(initialClass: entry.key),
+                classToStudentCount.update(
+                  classe,
+                  (v) => v + 1,
+                  ifAbsent: () => 1,
+                );
+              }
+
+              final allClassNames = <String>{
+                ...storedClasses,
+                ...classToStudentCount.keys,
+              };
+              final classEntries =
+                  allClassNames
+                      .map((c) => MapEntry(c, classToStudentCount[c] ?? 0))
+                      .toList()
+                    ..sort((a, b) => a.key.compareTo(b.key));
+
+              if (classEntries.isEmpty) {
+                return const _CenteredMessage(
+                  icon: Icons.apartment_outlined,
+                  title: 'Aucune classe',
+                  message: "Ajoutez une classe avec le bouton +.",
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                itemBuilder: (context, index) {
+                  final entry = classEntries[index];
+                  return InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              AdminTimetablePage(initialClass: entry.key),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance_outlined,
+                              color: Color(0xFF3B82F6),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.key,
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${entry.value} élèves',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.black38,
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.account_balance_outlined,
-                          color: Color(0xFF3B82F6),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.key,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${entry.value} élèves',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.black38),
-                    ],
-                  ),
-                ),
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemCount: classEntries.length,
               );
             },
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemCount: classes.length,
           );
         },
       ),
     );
+  }
+
+  Future<void> _showAddClassDialog(BuildContext context) async {
+    final controller = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Ajouter une classe'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Ex: 2nde A'),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _createClass(ctx, controller.text),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () => _createClass(ctx, controller.text),
+              child: const Text('Ajouter'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _createClass(BuildContext context, String rawName) async {
+    final name = rawName.trim();
+    if (name.isEmpty) return;
+
+    await FirebaseFirestore.instance.collection('classes').doc(name).set({
+      'name': name,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
 }
 
