@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../../../controllers/student_controller.dart';
 import '../../../../models/note_model.dart';
 import '../../notifications/notifications_page.dart';
@@ -297,31 +300,44 @@ class _NotesPageState extends State<NotesPage> {
                             ),
                             const SizedBox(height: 20),
                             // Download Button
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.download,
-                                    color: Colors.white,
-                                    size: 18,
+                                onTap: () => _showReportDialog(
+                                  context: context,
+                                  controller: controller,
+                                  notes: allNotes,
+                                ),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
                                   ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Télécharger le relevé',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                ],
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.download,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Télécharger le relevé',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -479,6 +495,161 @@ class _NotesPageState extends State<NotesPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showReportDialog({
+    required BuildContext context,
+    required StudentController controller,
+    required List<Note> notes,
+  }) async {
+    final studentName = controller.displayName.trim();
+    final classe = controller.myClasse.trim();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          titlePadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                studentName.isNotEmpty ? studentName : 'Élève',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                classe.isNotEmpty ? 'Classe : $classe' : 'Classe : -',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (notes.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Aucune note disponible.',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 320),
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Matière')),
+                          DataColumn(label: Text('Coeff.')),
+                          DataColumn(label: Text('Note')),
+                        ],
+                        rows: notes
+                            .map(
+                              (n) => DataRow(
+                                cells: [
+                                  DataCell(Text(n.matiere)),
+                                  DataCell(Text(_fmtNum(n.coefficient))),
+                                  DataCell(Text(_fmtNum(n.note))),
+                                ],
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: notes.isEmpty
+                        ? null
+                        : () async {
+                            Navigator.of(ctx).pop();
+                            await _exportReportPdf(
+                              studentName: studentName,
+                              classe: classe,
+                              notes: notes,
+                            );
+                          },
+                    child: const Text('Exporter'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _fmtNum(double value) {
+    if (value % 1 == 0) return value.toInt().toString();
+    return value.toStringAsFixed(2);
+  }
+
+  Future<void> _exportReportPdf({
+    required String studentName,
+    required String classe,
+    required List<Note> notes,
+  }) async {
+    final sorted = [...notes]..sort((a, b) => a.matiere.compareTo(b.matiere));
+
+    final doc = pw.Document();
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (context) {
+          return [
+            pw.Text(
+              'Relevé de notes',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text(
+              'Nom et prénom : ${studentName.isNotEmpty ? studentName : '-'}',
+            ),
+            pw.Text('Classe : ${classe.isNotEmpty ? classe : '-'}'),
+            pw.SizedBox(height: 16),
+            pw.TableHelper.fromTextArray(
+              headers: const ['Matière', 'Coefficient', 'Note'],
+              data: sorted
+                  .map(
+                    (n) => [n.matiere, _fmtNum(n.coefficient), _fmtNum(n.note)],
+                  )
+                  .toList(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.centerLeft,
+              headerDecoration: const pw.BoxDecoration(
+                color: PdfColors.grey300,
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 11),
+              cellPadding: const pw.EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 6,
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
+    final bytes = await doc.save();
+    await Printing.layoutPdf(
+      onLayout: (format) async => bytes,
+      name: 'releve_notes.pdf',
     );
   }
 }

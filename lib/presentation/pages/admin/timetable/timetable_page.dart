@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../models/emploi.dart';
+
+enum _TimetableMode { classe, professeur }
+
 class AdminTimetablePage extends StatefulWidget {
   final String? initialClass;
 
@@ -11,7 +15,9 @@ class AdminTimetablePage extends StatefulWidget {
 }
 
 class _AdminTimetablePageState extends State<AdminTimetablePage> {
+  _TimetableMode _mode = _TimetableMode.classe;
   String? _selectedClass;
+  String? _selectedTeacherId;
 
   @override
   void initState() {
@@ -21,6 +27,10 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
 
   @override
   Widget build(BuildContext context) {
+    final addEnabled = _mode == _TimetableMode.classe
+        ? _selectedClass != null
+        : _selectedTeacherId != null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -42,8 +52,8 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: Colors.black87),
-            onPressed: _selectedClass == null ? null : _openAddCourseDialog,
-            tooltip: 'Ajouter un cours',
+            onPressed: addEnabled ? _openAddSlotDialog : null,
+            tooltip: 'Ajouter un créneau',
           ),
           const SizedBox(width: 4),
         ],
@@ -65,11 +75,27 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final usersDocs = usersSnapshot.data!.docs;
-          final users = usersDocs.map((d) => d.data()).toList();
+          final docs = usersSnapshot.data!.docs;
+          final teacherNameById = <String, String>{
+            for (final d in docs)
+              d.id:
+                  (d.data()['nom'] ??
+                          d.data()['name'] ??
+                          d.data()['displayName'] ??
+                          d.id)
+                      .toString(),
+          };
+
+          final teachers =
+              docs
+                  .map((d) => _TeacherLite.fromDoc(d))
+                  .where((t) => t.isTeacher)
+                  .toList(growable: false)
+                ..sort((a, b) => a.displayName.compareTo(b.displayName));
 
           final classes = <String>{};
-          for (final u in users) {
+          for (final d in docs) {
+            final u = d.data();
             final rawRole = (u['role'] ?? u['type'] ?? '')
                 .toString()
                 .toLowerCase();
@@ -85,103 +111,179 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
           }
 
           final classList = classes.toList()..sort();
-
           if (_selectedClass == null && classList.isNotEmpty) {
             _selectedClass = classList.first;
           }
 
-          final selected = _selectedClass;
+          if (_selectedTeacherId == null && teachers.isNotEmpty) {
+            _selectedTeacherId = teachers.first.id;
+          }
+
+          final selectionMissing = _mode == _TimetableMode.classe
+              ? _selectedClass == null
+              : _selectedTeacherId == null;
 
           return Column(
             children: [
               Container(
                 color: Colors.white,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                child: Row(
+                child: Column(
                   children: [
-                    const Text(
-                      'Classe',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5F7FA),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.black12),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            value: selected,
-                            hint: const Text('Choisir une classe'),
-                            items: classList
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(
-                                      c,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(growable: false),
-                            onChanged: (v) =>
-                                setState(() => _selectedClass = v),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Text('Classe'),
+                            selected: _mode == _TimetableMode.classe,
+                            onSelected: (_) {
+                              setState(() => _mode = _TimetableMode.classe);
+                            },
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Text('Professeur'),
+                            selected: _mode == _TimetableMode.professeur,
+                            onSelected: (_) {
+                              setState(() => _mode = _TimetableMode.professeur);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Text(
+                          _mode == _TimetableMode.classe
+                              ? 'Classe'
+                              : 'Professeur',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F7FA),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.black12),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                value: _mode == _TimetableMode.classe
+                                    ? _selectedClass
+                                    : _selectedTeacherId,
+                                hint: Text(
+                                  _mode == _TimetableMode.classe
+                                      ? 'Choisir une classe'
+                                      : 'Choisir un professeur',
+                                ),
+                                items: (_mode == _TimetableMode.classe
+                                    ? classList
+                                          .map(
+                                            (c) => DropdownMenuItem(
+                                              value: c,
+                                              child: Text(
+                                                c,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(growable: false)
+                                    : teachers
+                                          .map(
+                                            (t) => DropdownMenuItem(
+                                              value: t.id,
+                                              child: Text(
+                                                t.displayName,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(growable: false)),
+                                onChanged: (v) {
+                                  setState(() {
+                                    if (_mode == _TimetableMode.classe) {
+                                      _selectedClass = v;
+                                    } else {
+                                      _selectedTeacherId = v;
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: selected == null
-                    ? const _CenteredMessage(
+                child: selectionMissing
+                    ? _CenteredMessage(
                         icon: Icons.schedule_outlined,
-                        title: 'Aucune classe',
-                        message:
-                            "Créez d'abord des élèves avec un champ 'classe'.",
+                        title: _mode == _TimetableMode.classe
+                            ? 'Aucune classe'
+                            : 'Aucun professeur',
+                        message: _mode == _TimetableMode.classe
+                            ? "Créez d'abord des élèves avec un champ 'classe'."
+                            : "Créez d'abord des professeurs dans la collection 'utilisateurs'.",
                       )
                     : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: FirebaseFirestore.instance
-                            .collection('emplois')
-                            .where('classe', isEqualTo: selected)
-                            .snapshots(),
-                        builder: (context, coursesSnapshot) {
-                          if (coursesSnapshot.hasError) {
+                        stream: _mode == _TimetableMode.classe
+                            ? FirebaseFirestore.instance
+                                  .collection('emplois')
+                                  .where('type', isEqualTo: 'eleve')
+                                  .where('classe', isEqualTo: _selectedClass)
+                                  .snapshots()
+                            : FirebaseFirestore.instance
+                                  .collection('emplois')
+                                  .where('type', isEqualTo: 'professeur')
+                                  .where(
+                                    'ownerId',
+                                    isEqualTo: _selectedTeacherId,
+                                  )
+                                  .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
                             return _CenteredMessage(
                               icon: Icons.error_outline,
                               title: 'Erreur',
-                              message: coursesSnapshot.error.toString(),
+                              message: snapshot.error.toString(),
                             );
                           }
 
-                          if (!coursesSnapshot.hasData) {
+                          if (!snapshot.hasData) {
                             return const Center(
                               child: CircularProgressIndicator(),
                             );
                           }
 
-                          final docs = coursesSnapshot.data!.docs;
-                          final items = docs
-                              .map((d) => _EmploiLite.fromDoc(d))
-                              .toList();
-
-                          items.sort((a, b) {
-                            final dayCmp = a.dayIndex.compareTo(b.dayIndex);
-                            if (dayCmp != 0) return dayCmp;
-                            return a.start.compareTo(b.start);
-                          });
+                          final items =
+                              snapshot.data!.docs
+                                  .map((d) => Schedule.fromFirestore(d))
+                                  .toList(growable: false)
+                                ..sort((a, b) {
+                                  final dayCmp = a.dayOfWeek.compareTo(
+                                    b.dayOfWeek,
+                                  );
+                                  if (dayCmp != 0) return dayCmp;
+                                  return a.startTime.compareTo(b.startTime);
+                                });
 
                           if (items.isEmpty) {
                             return const _CenteredMessage(
@@ -195,10 +297,10 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
                           return ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                             itemCount: items.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const SizedBox(height: 12),
                             itemBuilder: (context, index) {
-                              final c = items[index];
+                              final s = items[index];
                               return Container(
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
@@ -206,7 +308,7 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withAlpha(13),
                                       blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
@@ -234,31 +336,16 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            c.matiere,
+                                            s.subject,
                                             style: const TextStyle(
                                               color: Colors.black87,
                                               fontSize: 16,
                                               fontWeight: FontWeight.w800,
                                             ),
                                           ),
-                                          if (c.professeur != null &&
-                                              c.professeur!.trim().isNotEmpty)
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 4,
-                                              ),
-                                              child: Text(
-                                                c.professeur!,
-                                                style: TextStyle(
-                                                  color: Colors.grey[600],
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
                                           const SizedBox(height: 6),
                                           Text(
-                                            '${c.jour} • ${c.heureDebut} - ${c.heureFin}',
+                                            '${s.dayName} • ${s.startTime} - ${s.endTime}',
                                             style: TextStyle(
                                               color: Colors.grey[700],
                                               fontSize: 13,
@@ -267,13 +354,30 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Salle: ${c.salle}',
+                                            'Salle: ${s.classroom}',
                                             style: TextStyle(
                                               color: Colors.grey[600],
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
+                                          if (_mode == _TimetableMode.classe &&
+                                              (s.teacher ?? '')
+                                                  .trim()
+                                                  .isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 4,
+                                              ),
+                                              child: Text(
+                                                'Prof: ${s.teacher}',
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
@@ -292,13 +396,16 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
     );
   }
 
-  Future<void> _openAddCourseDialog() async {
+  Future<void> _openAddSlotDialog() async {
     final classe = _selectedClass;
-    if (classe == null) return;
+    final teacherId = _selectedTeacherId;
+
+    if (_mode == _TimetableMode.classe && classe == null) return;
+    if (_mode == _TimetableMode.professeur && teacherId == null) return;
 
     final messenger = ScaffoldMessenger.of(context);
 
-    final jours = const [
+    const jours = [
       'lundi',
       'mardi',
       'mercredi',
@@ -314,196 +421,213 @@ class _AdminTimetablePageState extends State<AdminTimetablePage> {
     final matiereController = TextEditingController();
     final salleController = TextEditingController(text: 'A101');
 
-    String? selectedTeacherName;
+    String? selectedTeacherForClassId;
+
+    final usersSnap = await FirebaseFirestore.instance
+        .collection('utilisateurs')
+        .get();
+    final teacherNameById = <String, String>{
+      for (final d in usersSnap.docs)
+        d.id:
+            (d.data()['nom'] ??
+                    d.data()['name'] ??
+                    d.data()['displayName'] ??
+                    d.id)
+                .toString(),
+    };
+    final teachers =
+        usersSnap.docs
+            .map((d) => _TeacherLite.fromDoc(d))
+            .where((t) => t.isTeacher)
+            .toList(growable: false)
+          ..sort((a, b) => a.displayName.compareTo(b.displayName));
 
     try {
       await showDialog<void>(
         context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Ajouter un cours'),
-            content: FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              future: FirebaseFirestore.instance
-                  .collection('utilisateurs')
-                  .get(),
-              builder: (context, snapshot) {
-                final allUsers = snapshot.data?.docs ?? const [];
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (dialogContext, setInnerState) {
+              final professorName = teacherId == null
+                  ? null
+                  : (teacherNameById[teacherId] ?? teacherId);
 
-                final teachers =
-                    allUsers
-                        .map((d) => _TeacherLite.fromDoc(d))
-                        .where((t) => t.isTeacher)
-                        .toList(growable: false)
-                      ..sort((a, b) => a.displayName.compareTo(b.displayName));
-
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const SizedBox(
-                    height: 120,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                return StatefulBuilder(
-                  builder: (context, setInnerState) {
-                    return SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+              return AlertDialog(
+                title: const Text('Ajouter un créneau'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              const Expanded(
-                                flex: 4,
-                                child: Text(
-                                  'Jour',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 6,
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: selectedJour,
-                                  items: jours
-                                      .map(
-                                        (j) => DropdownMenuItem(
-                                          value: j,
-                                          child: Text(j),
-                                        ),
-                                      )
-                                      .toList(growable: false),
-                                  onChanged: (v) {
-                                    if (v == null) return;
-                                    setInnerState(() => selectedJour = v);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: matiereController,
-                            decoration: const InputDecoration(
-                              labelText: 'Matière',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: salleController,
-                            decoration: const InputDecoration(
-                              labelText: 'Salle',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: heureDebutController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Heure début',
-                                    hintText: '08:00',
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: heureFinController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Heure fin',
-                                    hintText: '09:30',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
-                            value: selectedTeacherName,
-                            items: teachers
-                                .map(
-                                  (t) => DropdownMenuItem(
-                                    value: t.displayName,
-                                    child: Text(t.displayName),
-                                  ),
-                                )
-                                .toList(growable: false),
-                            decoration: const InputDecoration(
-                              labelText: 'Enseignant',
-                            ),
-                            onChanged: (v) {
-                              setInnerState(() => selectedTeacherName = v);
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerLeft,
+                          const Expanded(
+                            flex: 4,
                             child: Text(
-                              'Classe: $classe',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                              'Jour',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 6,
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: selectedJour,
+                              items: jours
+                                  .map(
+                                    (j) => DropdownMenuItem(
+                                      value: j,
+                                      child: Text(j),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                              onChanged: (v) {
+                                if (v == null) return;
+                                setInnerState(() => selectedJour = v);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: matiereController,
+                        decoration: const InputDecoration(labelText: 'Matière'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: salleController,
+                        decoration: const InputDecoration(labelText: 'Salle'),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: heureDebutController,
+                              decoration: const InputDecoration(
+                                labelText: 'Heure début',
+                                hintText: '08:00',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: heureFinController,
+                              decoration: const InputDecoration(
+                                labelText: 'Heure fin',
+                                hintText: '09:30',
                               ),
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                );
-              },
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final dialogContext = context;
-                  final matiere = matiereController.text.trim();
-                  final salle = salleController.text.trim();
-                  final heureDebut = heureDebutController.text.trim();
-                  final heureFin = heureFinController.text.trim();
-
-                  if (matiere.isEmpty ||
-                      heureDebut.isEmpty ||
-                      heureFin.isEmpty) {
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Veuillez remplir matière + heures.'),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _mode == _TimetableMode.classe
+                              ? 'Classe: $classe'
+                              : 'Professeur: $professorName',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
-                    );
-                    return;
-                  }
+                      if (_mode == _TimetableMode.classe)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: DropdownButtonFormField<String>(
+                            initialValue: selectedTeacherForClassId,
+                            items: teachers
+                                .map(
+                                  (t) => DropdownMenuItem(
+                                    value: t.id,
+                                    child: Text(t.displayName),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            decoration: const InputDecoration(
+                              labelText: 'Enseignant (optionnel)',
+                            ),
+                            onChanged: (v) {
+                              setInnerState(
+                                () => selectedTeacherForClassId = v,
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Annuler'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final matiere = matiereController.text.trim();
+                      final salle = salleController.text.trim();
+                      final heureDebut = heureDebutController.text.trim();
+                      final heureFin = heureFinController.text.trim();
 
-                  final dayIndex = _EmploiLite.dayIndexFromLowerDay(
-                    selectedJour,
-                  );
-                  await FirebaseFirestore.instance.collection('emplois').add({
-                    'classe': classe,
-                    'jour_semaine': dayIndex,
-                    'type': 'eleve',
-                    'ownerId': '',
-                    'creneaux': {
-                      'debut': heureDebut,
-                      'fin': heureFin,
-                      'matiere': matiere,
-                      'salle': salle,
-                      if (selectedTeacherName != null)
-                        'professeur': selectedTeacherName,
+                      if (matiere.isEmpty ||
+                          heureDebut.isEmpty ||
+                          heureFin.isEmpty) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Veuillez remplir matière + heures.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final dayIndex = _EmploiLite.dayIndexFromLowerDay(
+                        selectedJour,
+                      );
+                      final effectiveTeacherId =
+                          _mode == _TimetableMode.professeur
+                          ? teacherId!
+                          : selectedTeacherForClassId;
+                      final effectiveTeacherName = effectiveTeacherId == null
+                          ? null
+                          : teacherNameById[effectiveTeacherId];
+
+                      await FirebaseFirestore.instance
+                          .collection('emplois')
+                          .add({
+                            if (_mode == _TimetableMode.classe)
+                              'classe': classe,
+                            'jour_semaine': dayIndex,
+                            'type': _mode == _TimetableMode.classe
+                                ? 'eleve'
+                                : 'professeur',
+                            'ownerId': _mode == _TimetableMode.classe
+                                ? ''
+                                : teacherId,
+                            if (_mode == _TimetableMode.professeur)
+                              'professeurId': teacherId,
+                            'creneaux': {
+                              'debut': heureDebut,
+                              'fin': heureFin,
+                              'matiere': matiere,
+                              'salle': salle,
+                              if (effectiveTeacherName != null)
+                                'professeur': effectiveTeacherName,
+                            },
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
+
+                      if (!dialogContext.mounted) return;
+                      Navigator.pop(dialogContext);
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('Créneau ajouté.')),
+                      );
                     },
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
-
-                  if (!mounted) return;
-                  Navigator.pop(dialogContext);
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Créneau ajouté.')),
-                  );
-                },
-                child: const Text('Ajouter'),
-              ),
-            ],
+                    child: const Text('Ajouter'),
+                  ),
+                ],
+              );
+            },
           );
         },
       );
@@ -545,51 +669,8 @@ class _TeacherLite {
 }
 
 class _EmploiLite {
-  final String id;
-  final int dayOfWeek;
-  final String heureDebut;
-  final String heureFin;
-  final String matiere;
-  final String salle;
-  final String? professeur;
-
-  const _EmploiLite({
-    required this.id,
-    required this.dayOfWeek,
-    required this.heureDebut,
-    required this.heureFin,
-    required this.matiere,
-    required this.salle,
-    required this.professeur,
-  });
-
-  String get jour {
-    switch (dayOfWeek) {
-      case 1:
-        return 'Lundi';
-      case 2:
-        return 'Mardi';
-      case 3:
-        return 'Mercredi';
-      case 4:
-        return 'Jeudi';
-      case 5:
-        return 'Vendredi';
-      case 6:
-        return 'Samedi';
-      case 7:
-        return 'Dimanche';
-      default:
-        return 'Jour';
-    }
-  }
-
-  int get dayIndex => dayOfWeek;
-
-  String get start => heureDebut;
-
-  static int dayIndexFromLowerDay(String lower) {
-    switch (lower.trim().toLowerCase()) {
+  static int dayIndexFromLowerDay(String day) {
+    switch (day.toLowerCase()) {
       case 'lundi':
         return 1;
       case 'mardi':
@@ -607,36 +688,6 @@ class _EmploiLite {
       default:
         return 1;
     }
-  }
-
-  factory _EmploiLite.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data();
-    final creneaux = data['creneaux'];
-    final creneauxMap = creneaux is Map<String, dynamic> ? creneaux : null;
-
-    final dayRaw = data['jour_semaine'] ?? data['jour_semain'] ?? 1;
-    final dayOfWeek = dayRaw is int
-        ? dayRaw
-        : int.tryParse(dayRaw.toString()) ?? 1;
-
-    final matiere = (creneauxMap?['matiere'] ?? data['matiere'] ?? '')
-        .toString();
-    final salle = (creneauxMap?['salle'] ?? data['salle'] ?? '').toString();
-    final debut = (creneauxMap?['debut'] ?? data['debut'] ?? '08:00')
-        .toString();
-    final fin = (creneauxMap?['fin'] ?? data['fin'] ?? '10:00').toString();
-    final professeur = (creneauxMap?['professeur'] ?? data['professeur'])
-        ?.toString();
-
-    return _EmploiLite(
-      id: doc.id,
-      dayOfWeek: dayOfWeek,
-      heureDebut: debut,
-      heureFin: fin,
-      matiere: matiere,
-      salle: salle,
-      professeur: professeur,
-    );
   }
 }
 

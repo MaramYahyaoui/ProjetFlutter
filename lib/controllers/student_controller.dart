@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/note_model.dart';
 import '../models/homework_model.dart';
 import '../models/emploi.dart';
@@ -8,6 +9,26 @@ import '../models/emploi.dart';
 class StudentController extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
+
+  String? _myClasse;
+  String? _firstName;
+  String? _lastName;
+  String? _displayName;
+
+  String get myClasse => _myClasse ?? '';
+  String get firstName => _firstName ?? '';
+  String get lastName => _lastName ?? '';
+  String get displayName {
+    final dn = (_displayName ?? '').trim();
+    if (dn.isNotEmpty) return dn;
+
+    final fn = (_firstName ?? '').trim();
+    final ln = (_lastName ?? '').trim();
+    final full = [fn, ln].where((p) => p.isNotEmpty).join(' ');
+    if (full.isNotEmpty) return full;
+
+    return FirebaseAuth.instance.currentUser?.email ?? _uid;
+  }
 
   List<Note> _notes = [];
   List<Homework> _homeworks = [];
@@ -28,9 +49,33 @@ class StudentController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    await Future.wait([loadNotes(), loadHomeworks(), loadSchedules()]);
+    await Future.wait([
+      loadProfile(),
+      loadNotes(),
+      loadHomeworks(),
+      loadSchedules(),
+    ]);
 
     _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadProfile() async {
+    Future<Map<String, dynamic>?> readUser(String collection) async {
+      final doc = await _firestore.collection(collection).doc(_uid).get();
+      return doc.data();
+    }
+
+    final data = await readUser('utilisateurs') ?? await readUser('users');
+    if (data == null) return;
+
+    _firstName = (data['prenom'] as String?)?.trim();
+    _lastName = (data['nom'] as String?)?.trim();
+    _displayName =
+        (data['displayName'] as String?)?.trim() ??
+        (data['name'] as String?)?.trim();
+
+    _myClasse ??= (data['classe'] ?? data['class'])?.toString().trim();
     notifyListeners();
   }
 
@@ -57,7 +102,7 @@ class StudentController extends ChangeNotifier {
 
   Future<void> loadSchedules() async {
     try {
-      final myClasse = await _loadMyClasse();
+      _myClasse ??= await _loadMyClasse();
       final snapshot = await _firestore.collection('emplois').get();
 
       final Map<String, List<Schedule>> grouped = {};
@@ -74,25 +119,16 @@ class StudentController extends ChangeNotifier {
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
-        print('Schedule doc: ${doc.id} - $data'); // Debug log
+        final schedule = Schedule.fromFirestore(doc);
 
-        final docClasse = (data['classe'] ?? '').toString().trim();
-        if (myClasse != null &&
-            myClasse.trim().isNotEmpty &&
-            docClasse.isNotEmpty &&
-            docClasse != myClasse.trim()) {
+        final classe = (data['classe'] ?? data['class']).toString().trim();
+        final myClasse = (_myClasse ?? '').trim();
+        if (myClasse.isNotEmpty && classe.isNotEmpty && classe != myClasse) {
           continue;
         }
 
-        final schedule = Schedule.fromFirestore(doc);
-        print(
-          'Parsed: ownerId=${schedule.ownerId}, dayOfWeek=${schedule.dayOfWeek}, subject=${schedule.subject}',
-        );
-
-        // Filter by ownerId in memory - show all if ownerId is empty (for testing)
-        final ownerId = schedule.ownerId ?? '';
-        if (ownerId.isNotEmpty && ownerId != _uid) {
-          print('Skipping - ownerId mismatch: $ownerId != $_uid');
+        final ownerId = (schedule.ownerId ?? '').trim();
+        if (classe.isEmpty && ownerId.isNotEmpty && ownerId != _uid) {
           continue;
         }
 
@@ -109,25 +145,25 @@ class StudentController extends ChangeNotifier {
       _schedules = grouped;
       notifyListeners();
     } catch (e) {
-      print('Error loading schedules: $e');
+      if (kDebugMode) {
+        debugPrint('Error loading schedules: $e');
+      }
     }
   }
 
   Future<String?> _loadMyClasse() async {
-    try {
-      final doc1 = await _firestore.collection('utilisateurs').doc(_uid).get();
-      final data1 = doc1.data();
-      final c1 = (data1?['classe'] ?? data1?['class'])?.toString().trim();
-      if (c1 != null && c1.isNotEmpty) return c1;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
 
-      final doc2 = await _firestore.collection('users').doc(_uid).get();
-      final data2 = doc2.data();
-      final c2 = (data2?['classe'] ?? data2?['class'])?.toString().trim();
-      if (c2 != null && c2.isNotEmpty) return c2;
-    } catch (_) {
-      // Ignore and fall back to showing schedules without class filtering.
+    Future<String?> readClasse(String collection) async {
+      final doc = await _firestore.collection(collection).doc(uid).get();
+      final data = doc.data();
+      if (data == null) return null;
+      final raw = (data['classe'] ?? data['class']).toString().trim();
+      return raw.isEmpty ? null : raw;
     }
-    return null;
+
+    return await readClasse('utilisateurs') ?? await readClasse('users');
   }
 
   double getAverage() {
