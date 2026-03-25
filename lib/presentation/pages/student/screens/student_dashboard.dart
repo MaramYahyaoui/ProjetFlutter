@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../controllers/student_controller.dart';
 import '../../../../models/note_model.dart';
 import '../../../../models/emploi.dart';
@@ -153,9 +152,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
       }
     }
 
-    // Get user name
-    final userName = FirebaseAuth.instance.currentUser?.displayName ?? 'Élève';
-    final firstName = userName.split(' ').first;
+    final displayName = controller.displayName.trim().isNotEmpty
+      ? controller.displayName.trim()
+      : 'Élève';
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -194,7 +193,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               ),
                             ),
                             Text(
-                              firstName,
+                              displayName,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 28,
