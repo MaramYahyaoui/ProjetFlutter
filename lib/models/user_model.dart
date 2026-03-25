@@ -8,6 +8,7 @@ class User extends Equatable {
   final String? displayName;
   final String role; // eleve, enseignant, parent, admin
   final String? classe;
+  final String? photoPath; // Data URL de la photo de profil
   final DateTime? createdAt;
   final bool isEmailVerified;
   final bool isActive;
@@ -20,6 +21,7 @@ class User extends Equatable {
     this.displayName,
     required this.role,
     this.classe,
+    this.photoPath,
     this.createdAt,
     this.isEmailVerified = false,
     this.isActive = true,
@@ -49,6 +51,7 @@ class User extends Equatable {
           (data['name'] as String?)?.trim(),
       role: data['role'] as String? ?? 'eleve',
       classe: (data['classe'] ?? data['class'])?.toString().trim(),
+      photoPath: (data['photoPath'] as String?)?.trim(),
       createdAt: (data['createdAt'] as dynamic)?.toDate(),
       isEmailVerified: data['isEmailVerified'] as bool? ?? false,
       isActive: data['isActive'] as bool? ?? true,
@@ -64,6 +67,7 @@ class User extends Equatable {
       'displayName': displayName,
       'role': role,
       'classe': classe,
+      'photoPath': photoPath,
       'createdAt': createdAt,
       'isEmailVerified': isEmailVerified,
       'isActive': isActive,
@@ -79,6 +83,7 @@ class User extends Equatable {
     String? displayName,
     String? role,
     String? classe,
+    String? photoPath,
     DateTime? createdAt,
     bool? isEmailVerified,
     bool? isActive,
@@ -91,6 +96,7 @@ class User extends Equatable {
       displayName: displayName ?? this.displayName,
       role: role ?? this.role,
       classe: classe ?? this.classe,
+      photoPath: photoPath ?? this.photoPath,
       createdAt: createdAt ?? this.createdAt,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       isActive: isActive ?? this.isActive,
@@ -106,6 +112,7 @@ class User extends Equatable {
         displayName,
         role,
         classe,
+        photoPath,
         createdAt,
         isEmailVerified,
         isActive,

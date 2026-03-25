@@ -242,6 +242,11 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Définit l'utilisateur connecté (public, utilise pour les mises à jour)
+  void setUser(User user) {
+    _setUser(user);
+  }
+
   /// Réinitialise l'état d'authentification
   void _clearAuthState() {
     _user = null;

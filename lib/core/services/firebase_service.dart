@@ -181,6 +181,21 @@ class FirebaseService {
 
   // ============ BATCH OPERATIONS ============
 
+  /// Met à jour la photo de profil d'un utilisateur
+  Future<void> updateUserProfilePhoto(String userId, String photoDataUrl) async {
+    try {
+      await _firestore
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .update({
+        'photoPath': photoDataUrl,
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error updating profile photo: $e');
+      rethrow;
+    }
+  }
+
   /// Récupère tous les profils utilisateurs d'une classe
   Future<List<User>> getClassUsers(String classe) async {
     try {

@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../controllers/student_controller.dart';
 import '../../../../controllers/auth_controller.dart';
+import '../../../../core/services/firebase_service.dart';
+import '../../../widgets/user_profile_image_picker.dart';
 import '../../notifications/notifications_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -133,54 +135,7 @@ class ProfilePage extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(height: 22),
-                                Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Container(
-                                      width: 96,
-                                      height: 96,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.15),
-                                            blurRadius: 14,
-                                            offset: const Offset(0, 6),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Center(
-                                        child: CircleAvatar(
-                                          radius: 42,
-                                          backgroundColor: Colors.white,
-                                          child: Icon(
-                                            Icons.person,
-                                            size: 48,
-                                            color: Color(0xFF2962FF),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      right: 6,
-                                      bottom: 6,
-                                      child: Container(
-                                        width: 22,
-                                        height: 22,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF2ECC71),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 3,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                _buildProfileImagePicker(context),
                                 const SizedBox(height: 14),
                                 Text(
                                   userName,
@@ -641,6 +596,47 @@ class ProfilePage extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Divider(height: 1, color: Colors.grey[200]),
+    );
+  }
+
+  Widget _buildProfileImagePicker(BuildContext context) {
+    final authController = context.read<AuthController>();
+    final firebaseService = FirebaseService();
+    final user = authController.user;
+
+    return UserProfileImagePicker(
+      initialPhotoDataUrl: user?.photoPath,
+      onImagePicked: (dataUrl) async {
+        if (user == null) return;
+
+        try {
+          // Sauvegarder la photo dans Firestore
+          await firebaseService.updateUserProfilePhoto(user.id, dataUrl);
+
+          // Mettre à jour l'AuthController
+          final updatedUser = user.copyWith(photoPath: dataUrl);
+          authController.setUser(updatedUser);
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo de profil mise à jour'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Erreur: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+      size: 96,
     );
   }
 }

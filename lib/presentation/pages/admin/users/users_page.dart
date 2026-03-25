@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 import 'add_user_page.dart';
 import '../../notifications/notifications_page.dart';
@@ -332,12 +333,22 @@ class _UserTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.grey[200],
-            foregroundColor: Colors.grey[700],
-            child: const Icon(Icons.person, size: 22),
-          ),
+          if (user.photoPath != null && user.photoPath!.isNotEmpty)
+            CircleAvatar(
+              radius: 22,
+              backgroundImage: MemoryImage(
+                base64Decode(
+                  user.photoPath!.split(',').last,
+                ),
+              ),
+            )
+          else
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: Colors.grey[200],
+              foregroundColor: Colors.grey[700],
+              child: const Icon(Icons.person, size: 22),
+            ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -524,12 +535,14 @@ class _AdminUser {
   final String email;
   final String role;
   final String displayName;
+  final String? photoPath;
 
   const _AdminUser({
     required this.id,
     required this.email,
     required this.role,
     required this.displayName,
+    this.photoPath,
   });
 
   bool get isStudent => role == 'eleve' || role == 'student';
@@ -562,6 +575,7 @@ class _AdminUser {
           : (composed.isNotEmpty
                 ? composed
                 : (email.isNotEmpty ? email : doc.id)),
+      photoPath: (data['photoPath'] as String?),
     );
   }
 }

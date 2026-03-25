@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../controllers/auth_controller.dart';
+import '../../../../core/services/firebase_service.dart';
+import '../../widgets/user_profile_image_picker.dart';
 import 'notes/admin_notes_page.dart';
 import 'parents/admin_parents_page.dart';
 
@@ -21,6 +23,42 @@ class AdminProfilePage extends StatelessWidget {
         );
       }
     }
+  }
+
+  Widget _buildProfileImagePicker(BuildContext context) {
+    final authController = context.read<AuthController>();
+    final firebaseService = FirebaseService();
+    final user = authController.user;
+
+    return UserProfileImagePicker(
+      initialPhotoDataUrl: user?.photoPath,
+      onImagePicked: (dataUrl) async {
+        if (user == null) return;
+        try {
+          await firebaseService.updateUserProfilePhoto(user.id, dataUrl);
+          final updatedUser = user.copyWith(photoPath: dataUrl);
+          authController.setUser(updatedUser);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo de profil mise à jour'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Erreur lors de la mise à jour: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+      size: 96,
+    );
   }
 
   @override
@@ -95,69 +133,16 @@ class AdminProfilePage extends StatelessWidget {
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const SizedBox(height: 18),
-                                Center(
-                                  child: Column(
-                                    children: [
-                                      Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          Container(
-                                            width: 74,
-                                            height: 74,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.16),
-                                                  blurRadius: 14,
-                                                  offset: const Offset(0, 6),
-                                                ),
-                                              ],
-                                            ),
-                                            child: const Center(
-                                              child: CircleAvatar(
-                                                radius: 32,
-                                                backgroundColor: Colors.white,
-                                                child: Icon(
-                                                  Icons.person,
-                                                  size: 34,
-                                                  color: Color(0xFFFF4D00),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            right: 4,
-                                            bottom: 4,
-                                            child: Container(
-                                              width: 18,
-                                              height: 18,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF2ECC71),
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: Colors.white,
-                                                  width: 3,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        userName,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ],
+                                const SizedBox(height: 22),
+                                _buildProfileImagePicker(context),
+                                const SizedBox(height: 14),
+                                Text(
+                                  userName,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
