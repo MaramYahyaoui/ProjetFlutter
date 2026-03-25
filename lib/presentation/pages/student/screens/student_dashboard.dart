@@ -19,6 +19,15 @@ class StudentDashboard extends StatefulWidget {
 class _StudentDashboardState extends State<StudentDashboard> {
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialise les données du StudentController au démarrage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StudentController>().init();
+    });
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Bonjour';

@@ -24,8 +24,13 @@ dependencies:
 
   # Cupertino icons (iOS style icons)
   cupertino_icons: ^1.0.8
+  
+  # PDF generation
   pdf: ^3.12.0
   printing: ^5.14.3
+
+  # Equatable - pour la comparaison d'objets
+  equatable: ^2.0.5
 
 dev_dependencies:
   flutter_test:

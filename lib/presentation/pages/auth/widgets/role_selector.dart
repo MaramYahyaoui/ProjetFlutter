@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 class RoleSelector extends StatelessWidget {
   final String? selectedRole;
   final Function(String) onSelect;
+  final bool enabled;
 
-  RoleSelector({required this.selectedRole, required this.onSelect});
+  RoleSelector({
+    required this.selectedRole,
+    required this.onSelect,
+    this.enabled = true,
+  });
 
   final List<Map<String, dynamic>> roles = [
     {
@@ -44,21 +49,24 @@ class RoleSelector extends StatelessWidget {
       children: roles.map((role) {
         bool isSelected = selectedRole == role['value'];
         return GestureDetector(
-          onTap: () => onSelect(role['value']),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: isSelected ? role['iconColor'] : role['bgColor'],
-                child: Icon(
-                  role['icon'],
-                  color: isSelected ? Colors.white : role['iconColor'],
-                  size: 28,
+          onTap: enabled ? () => onSelect(role['value']) : null,
+          child: Opacity(
+            opacity: enabled ? 1.0 : 0.5,
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: isSelected ? role['iconColor'] : role['bgColor'],
+                  child: Icon(
+                    role['icon'],
+                    color: isSelected ? Colors.white : role['iconColor'],
+                    size: 28,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 5),
-              Text(role['label']),
-            ],
+                const SizedBox(height: 5),
+                Text(role['label']),
+              ],
+            ),
           ),
         );
       }).toList(),

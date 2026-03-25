@@ -1,9 +1,9 @@
-import 'package:devmob_edulycee/presentation/pages/auth/Login.dart';
+import 'package:devmob_edulycee/presentation/pages/auth_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'firebase_options.dart'; // généré par flutterfire CLI
-import 'controllers/student_controller.dart';
+import 'firebase_options.dart';
+import 'controllers/auth_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,13 +17,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => StudentController())],
+      providers: [
+        // AuthController - gère l'authentification et l'état utilisateur
+        ChangeNotifierProvider(create: (_) => AuthController()),
+      ],
       child: MaterialApp(
-        title: 'DevMob Edulycée',
+        title: 'DevMob EduLycée',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(primarySwatch: Colors.blue),
-        routes: {'/login': (_) => const LoginPage()},
-        home: const LoginPage(),
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          useMaterial3: true,
+        ),
+        home: const AuthGate(), // Route protection
       ),
     );
   }

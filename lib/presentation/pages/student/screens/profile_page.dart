@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../controllers/student_controller.dart';
+import '../../../../controllers/auth_controller.dart';
 import '../../notifications/notifications_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -10,12 +11,9 @@ class ProfilePage extends StatelessWidget {
 
   Future<void> _signOut(BuildContext context) async {
     try {
-      await FirebaseAuth.instance.signOut();
-      if (context.mounted) {
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/login', (route) => false);
-      }
+      // Utilise AuthController pour déconnecter
+      await context.read<AuthController>().logout();
+      // AuthGate verra isAuthenticated = false et affichera LoginPage automatiquement
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

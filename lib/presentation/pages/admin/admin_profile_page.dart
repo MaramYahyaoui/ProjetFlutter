@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../../controllers/auth_controller.dart';
 import 'notes/admin_notes_page.dart';
 import 'parents/admin_parents_page.dart';
 
@@ -9,12 +11,9 @@ class AdminProfilePage extends StatelessWidget {
 
   Future<void> _signOut(BuildContext context) async {
     try {
-      await FirebaseAuth.instance.signOut();
-      if (context.mounted) {
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/login', (route) => false);
-      }
+      // Utilise AuthController pour déconnecter
+      await context.read<AuthController>().logout();
+      // AuthGate verra isAuthenticated = false et affichera LoginPage automatiquement
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

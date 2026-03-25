@@ -8,7 +8,9 @@ import '../models/emploi.dart';
 
 class StudentController extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  String get _uid => FirebaseAuth.instance.currentUser!.uid;
+  final String _uid;
+
+  StudentController(this._uid);
 
   String? _myClasse;
   String? _firstName;
@@ -41,23 +43,40 @@ class StudentController extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  StudentController() {
-    loadData();
+  /// Initialise les données de l'étudiant
+  /// À appeler après l'authentification
+  Future<void> init() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await Future.wait([
+        loadProfile(),
+        loadNotes(),
+        loadHomeworks(),
+        loadSchedules(),
+      ]);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadData() async {
     _isLoading = true;
     notifyListeners();
 
-    await Future.wait([
-      loadProfile(),
-      loadNotes(),
-      loadHomeworks(),
-      loadSchedules(),
-    ]);
-
-    _isLoading = false;
-    notifyListeners();
+    try {
+      await Future.wait([
+        loadProfile(),
+        loadNotes(),
+        loadHomeworks(),
+        loadSchedules(),
+      ]);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadProfile() async {
