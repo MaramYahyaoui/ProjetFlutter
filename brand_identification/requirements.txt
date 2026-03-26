@@ -1,0 +1,19 @@
+# Python dependencies for the brand identification pipeline
+# Install with: pip install -r requirements.txt
+
+# Deep learning
+tensorflow>=2.12,<3.0
+
+# API server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+
+# Image handling
+Pillow>=10.0.0
+
+# Data manipulation
+numpy>=1.24.0
+
+# Notebook support (optional – only for training notebooks)
+jupyter>=1.0.0
+matplotlib>=3.7.0

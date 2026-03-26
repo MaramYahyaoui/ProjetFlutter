@@ -1,0 +1,25 @@
+# Dataset files — never commit
+data/
+
+# Trained model artifacts
+saved_model/
+*.h5
+*.keras
+*.pb
+*.ckpt*
+checkpoint
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Misc
+*.log
