@@ -32,6 +32,12 @@ dependencies:
   # Equatable - pour la comparaison d'objets
   equatable: ^2.0.5
 
+  # UUID - pour générer des identifiants uniques
+  uuid: ^4.0.0
+
+  # Shared preferences - pour sauvegarder les préférences utilisateur
+  shared_preferences: ^2.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

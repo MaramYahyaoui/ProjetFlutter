@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../controllers/student_controller.dart';
 import '../../../../controllers/auth_controller.dart';
+import '../../../../controllers/theme_controller.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../../widgets/user_profile_image_picker.dart';
 import '../../notifications/notifications_page.dart';
@@ -386,7 +387,9 @@ class ProfilePage extends StatelessWidget {
                             Icons.dark_mode_outlined,
                             'Mode sombre',
                             const Color(0xFFFF9800),
-                            () {},
+                            () {
+                              context.read<ThemeController>().toggleDarkMode();
+                            },
                           ),
                           _buildDivider(),
                           _buildMenuOption(

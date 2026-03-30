@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../controllers/auth_controller.dart';
+import '../../../../controllers/theme_controller.dart';
 import '../../../../core/services/firebase_service.dart';
 import '../../widgets/user_profile_image_picker.dart';
 import 'notes/admin_notes_page.dart';
@@ -76,7 +77,7 @@ class AdminProfilePage extends StatelessWidget {
           child: Column(
             children: [
               SizedBox(
-                height: 250,
+                height: 280,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -155,7 +156,7 @@ class AdminProfilePage extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 child: Column(
                   children: [
                     _InfoCard(
@@ -230,7 +231,9 @@ class AdminProfilePage extends StatelessWidget {
                         _SettingsTile(
                           icon: Icons.dark_mode_outlined,
                           title: 'Mode sombre',
-                          onTap: () {},
+                          onTap: () {
+                            context.read<ThemeController>().toggleDarkMode();
+                          },
                         ),
                         _SettingsDivider(),
                         _SettingsTile(
