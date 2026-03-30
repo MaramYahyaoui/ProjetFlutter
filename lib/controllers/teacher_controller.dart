@@ -81,8 +81,11 @@ class TeacherController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Charger le profil EN PREMIER
+      await loadProfile();
+      
+      // Puis charger les autres données
       await Future.wait([
-        loadProfile(),
         loadGradeEntries(),
         loadSchedules(),
       ]);
@@ -102,8 +105,11 @@ class TeacherController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Charger le profil EN PREMIER
+      await loadProfile();
+      
+      // Puis charger les autres données
       await Future.wait([
-        loadProfile(),
         loadGradeEntries(),
         loadSchedules(),
       ]);
@@ -120,7 +126,10 @@ class TeacherController extends ChangeNotifier {
   Future<void> loadProfile() async {
     try {
       final doc = await _firestore.collection('utilisateurs').doc(uid).get();
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        debugPrint('❌ Profil non trouvé pour UID: $uid');
+        return;
+      }
 
       final data = doc.data() ?? {};
 
@@ -133,6 +142,8 @@ class TeacherController extends ChangeNotifier {
       _photoPath = (data['photoPath'] as String?);
       _subjects = List<String>.from((data['matiere'] as List?) ?? []);
       _classes = List<String>.from((data['classes'] as List?) ?? []);
+
+      debugPrint('👤 Profil chargé: firstName=$_firstName, lastName=$_lastName, displayName=$_displayName');
 
       notifyListeners();
     } catch (e) {
@@ -164,15 +175,112 @@ class TeacherController extends ChangeNotifier {
   /// Charge l'emploi de temps du professeur
   Future<void> loadSchedules() async {
     try {
+      // Charger TOUS les emplois (pas de filtre par type)
       final snapshot = await _firestore
           .collection('emplois')
-          .where('type', isEqualTo: 'professeur')
-          .where('ownerId', isEqualTo: uid)
           .get();
 
-      _schedules = snapshot.docs
-          .map((doc) => Schedule.fromFirestore(doc))
+      // Construire les noms possibles du professeur
+      final names = <String>[];
+      
+      final firstName = (_firstName ?? '').trim().toLowerCase();
+      final lastName = (_lastName ?? '').trim().toLowerCase();
+      final displayName = this.displayName.trim().toLowerCase();
+      
+      if (firstName.isNotEmpty) names.add(firstName);
+      if (lastName.isNotEmpty) names.add(lastName);
+      if (displayName.isNotEmpty) names.add(displayName);
+      if (firstName.isNotEmpty && lastName.isNotEmpty) {
+        names.add('$firstName $lastName');
+        names.add('$lastName $firstName');
+      }
+
+      debugPrint('🔍 TOP: Filtrage emplois avec noms: $names');
+      debugPrint('   firstName="$firstName", lastName="$lastName", displayName="$displayName"');
+      
+      debugPrint('📊 Total emplois en base: ${snapshot.docs.length}');
+      
+      // Afficher les professeurs disponibles pour le debug
+      final allTeachers = snapshot.docs
+          .map((doc) => ((doc.data()['professeur'] as String?) ?? '').trim().toLowerCase())
+          .toSet()
           .toList();
+      debugPrint('👨‍🏫 Professeurs dispo: $allTeachers');
+      
+      // Debug: afficher les 3 premiers emplois complets
+      for (int i = 0; i < snapshot.docs.take(3).length; i++) {
+        final doc = snapshot.docs[i];
+        final data = doc.data();
+        debugPrint('   📌 Emploi $i (${doc.id}):');
+        debugPrint('      Toutes les clés: ${data.keys.toList()}');
+        debugPrint('      professeur="${data['professeur']}", type="${data['type']}"');
+        debugPrint('      matiere="${data['matiere']}", salle="${data['salle']}"');
+        debugPrint('      jour_semaine=${data['jour_semaine']}, ownerId="${data['ownerId']}"');
+        // Afficher TOUTES les clés et valeurs pour debug
+        data.forEach((key, value) {
+          debugPrint('      $key: $value (type: ${value.runtimeType})');
+        });
+      }
+      
+      // Charger les emplois avec leurs subcollections creneaux
+      final allSchedules = <Schedule>[];
+      
+      for (final doc in snapshot.docs) {
+        final docData = doc.data();
+        final teacher = (docData['professeur'] as String? ?? '').trim();
+        
+        debugPrint('🔎 Vérification Emploi ${doc.id}: prof="$teacher", ownerId="${docData['ownerId']}"');
+        
+        // Vérifier si cet emploi correspond au professeur
+        final schedTeacher = teacher.toLowerCase();
+        final matches = names.any((name) => 
+          schedTeacher == name || 
+          schedTeacher.contains(name) ||
+          name.contains(schedTeacher)
+        );
+        
+        if (!matches && docData['ownerId'] != uid) {
+          debugPrint('⏭️ Emploi ${doc.id} ignoré (prof: $teacher, ownerId: ${docData['ownerId']})');
+          continue;
+        }
+        
+        debugPrint('✓ Emploi ${doc.id} correspond');
+        
+        // Vérifier s'il y a un champ creneaux (map imbriquée)
+        final creneauxMap = docData['creneaux'] as Map<String, dynamic>?;
+        
+        if (creneauxMap == null || creneauxMap.isEmpty) {
+          // Si pas de creneaux, utiliser les données du document root
+          debugPrint('   ↳ Pas de creneaux, utilisant données root');
+          final schedule = Schedule.fromFirestore(doc);
+          if (schedule.subject.isNotEmpty) {
+            allSchedules.add(schedule);
+            debugPrint('✅ Schedule créé: ${schedule.subject} (prof: ${schedule.teacher}, jour: ${schedule.dayOfWeek})');
+          }
+        } else {
+          // Si creneaux existe comme map, créer une Schedule
+          debugPrint('   ↳ Creneau trouvé: matiere="${creneauxMap['matiere']}", jour=${docData['jour_semaine']}');
+          
+          // Fusionner les données root avec creneaux
+          final mergedData = {
+            ...docData,
+            'jour_semaine': docData['jour_semaine'], // Garder jour_semaine du root
+            'debut': creneauxMap['debut'],
+            'fin': creneauxMap['fin'],
+            'matiere': creneauxMap['matiere'] ?? docData['matiere'],
+            'salle': creneauxMap['salle'] ?? docData['salle'],
+            'professeur': creneauxMap['professeur'] ?? docData['professeur'],
+          };
+          
+          final fakeDoc = _createFakeDocSnapshot(doc.id, mergedData);
+          final schedule = Schedule.fromFirestore(fakeDoc);
+          allSchedules.add(schedule);
+          
+          debugPrint('✅ Schedule créé: ${schedule.subject} (prof: ${schedule.teacher}, jour: ${schedule.dayOfWeek}, ${schedule.startTime}-${schedule.endTime})');
+        }
+      }
+
+      _schedules = allSchedules;
 
       // Tri en mémoire par jour de semaine et heure de début
       _schedules.sort((a, b) {
@@ -188,10 +296,23 @@ class TeacherController extends ChangeNotifier {
         _schedulesByDay[schedule.dayOfWeek]!.add(schedule);
       }
 
+      debugPrint('✅ Emplois chargés: ${_schedules.length} cours trouvés');
+      for (int day = 1; day <= 7; day++) {
+        if (_schedulesByDay.containsKey(day)) {
+          debugPrint('   Jour $day: ${_schedulesByDay[day]!.length} cours');
+        }
+      }
       notifyListeners();
     } catch (e) {
       debugPrint('❌ Erreur loadSchedules: $e');
+      debugPrint('   Stack: $e');
     }
+  }
+
+  /// Helper pour créer un DocumentSnapshot fake
+  DocumentSnapshot _createFakeDocSnapshot(String id, Map<String, dynamic> data) {
+    // Créer un mock DocumentSnapshot
+    return _FakeDocumentSnapshot(id, data);
   }
 
   /// Sélectionne une classe et charge ses statistiques
@@ -390,4 +511,33 @@ class TeacherController extends ChangeNotifier {
     _classStatisticsMap.clear();
     super.dispose();
   }
+}
+
+/// Classe helper pour créer un DocumentSnapshot fake
+class _FakeDocumentSnapshot implements DocumentSnapshot {
+  final String _id;
+  final Map<String, dynamic> _data;
+
+  _FakeDocumentSnapshot(this._id, this._data);
+
+  @override
+  String get id => _id;
+
+  @override
+  Map<String, dynamic>? data() => _data;
+
+  @override
+  bool get exists => true;
+
+  @override
+  DocumentReference get reference => throw UnimplementedError();
+
+  @override
+  SnapshotMetadata get metadata => throw UnimplementedError();
+
+  @override
+  dynamic get(Object field) => throw UnimplementedError();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

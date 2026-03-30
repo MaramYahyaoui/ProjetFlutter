@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Schedule {
@@ -28,20 +29,15 @@ class Schedule {
   factory Schedule.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
-    // Handle creneaux subcollection or direct fields
-    final creneaux = data['creneaux'] as Map<String, dynamic>?;
-
     return Schedule(
       id: doc.id,
-      subject: creneaux?['matiere'] ?? data['matiere'] ?? '',
-      teacher: creneaux?['professeur'] ?? data['professeur'],
-      classroom: creneaux?['salle'] ?? data['salle'] ?? '',
-      // Handle both jour_semaine and jour_semain (typo in DB)
+      subject: data['matiere'] ?? '',
+      teacher: data['professeur'],
+      classroom: data['salle'] ?? '',
       dayOfWeek: data['jour_semaine'] ?? data['jour_semain'] ?? 1,
-      startTime: creneaux?['debut'] ?? data['debut'] ?? '08:00',
-      endTime: creneaux?['fin'] ?? data['fin'] ?? '10:00',
+      startTime: data['debut'] ?? '08:00',
+      endTime: data['fin'] ?? '10:00',
       type: data['type'] ?? 'eleve',
-      // Handle both ownerId, eleveId, and professeurId
       ownerId: data['ownerId'] ?? data['eleveId'] ?? data['professeurId'] ?? '',
       color: data['color'],
     );
