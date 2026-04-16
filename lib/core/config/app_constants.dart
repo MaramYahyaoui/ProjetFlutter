@@ -4,7 +4,9 @@ class FirebaseCollections {
   static const String notes = 'notes';
   static const String homeworks = 'devoirs';
   static const String schedules = 'emplois';
-  
+  static const String conversations = 'conversations';
+  static const String messages = 'messages';
+
   // Alias pour compatibilité
   static const String utilisateurs = users;
   static const String devoirs = homeworks;
@@ -17,10 +19,10 @@ class UserRoles {
   static const String teacher = 'enseignant';
   static const String parent = 'parent';
   static const String admin = 'admin';
-  
+
   /// Liste de tous les rôles disponibles
   static const List<String> all = [student, teacher, parent, admin];
-  
+
   /// Obtient le label d'affichage pour un rôle
   static String getLabel(String role) {
     switch (role) {
@@ -69,13 +71,25 @@ class FirebaseFields {
   static const String endTime = 'heureFin';
   static const String dayOfWeek = 'jour';
   static const String location = 'salle';
+
+  // Messaging fields
+  static const String participants = 'participants';
+  static const String participantNames = 'participantNames';
+  static const String unreadCounts = 'unreadCounts';
+  static const String lastMessage = 'lastMessage';
+  static const String lastSenderId = 'lastSenderId';
+  static const String lastMessageAt = 'lastMessageAt';
+  static const String updatedAt = 'updatedAt';
+  static const String text = 'text';
+  static const String senderId = 'senderId';
+  static const String senderName = 'senderName';
 }
 
 /// App constants
 class AppConstants {
   static const String appName = 'EduLycée';
   static const String appVersion = '1.0.0';
-  
+
   // Authentication errors
   static const String errorUserNotFound = 'user-not-found';
   static const String errorWrongPassword = 'wrong-password';

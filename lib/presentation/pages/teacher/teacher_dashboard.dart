@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../controllers/teacher_controller.dart';
 import '../../../controllers/auth_controller.dart';
+import '../messages/conversations_page.dart';
 import 'screens/teacher_home_screen.dart';
 import 'screens/teacher_classes_screen.dart';
 import 'screens/grade_entry_screen.dart';
@@ -38,6 +39,8 @@ class _TeacherDashboardContentState extends State<_TeacherDashboardContent> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = context.watch<AuthController>().user;
+
     return Consumer<TeacherController>(
       builder: (context, controller, _) {
         return Scaffold(
@@ -46,6 +49,9 @@ class _TeacherDashboardContentState extends State<_TeacherDashboardContent> {
             const TeacherClassesScreen(),
             const GradeEntryScreen(),
             const TeacherTimetableScreen(),
+            currentUser == null
+                ? const Center(child: Text('Connexion requise.'))
+                : ConversationsPage(currentUser: currentUser),
             const TeacherStatisticsScreen(),
             const TeacherProfileScreen(),
           ][_selectedIndex],
@@ -58,10 +64,7 @@ class _TeacherDashboardContentState extends State<_TeacherDashboardContent> {
             },
             type: BottomNavigationBarType.fixed,
             items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: 'Accueil',
-              ),
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
               BottomNavigationBarItem(
                 icon: Icon(Icons.school),
                 label: 'Classes',
@@ -73,6 +76,10 @@ class _TeacherDashboardContentState extends State<_TeacherDashboardContent> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.schedule),
                 label: 'Emploi',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.chat_bubble_outline),
+                label: 'Messages',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.bar_chart),
@@ -89,5 +96,3 @@ class _TeacherDashboardContentState extends State<_TeacherDashboardContent> {
     );
   }
 }
-
-

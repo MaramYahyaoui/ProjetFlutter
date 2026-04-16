@@ -6,6 +6,8 @@ import '../../models/user_model.dart';
 import '../../models/note_model.dart';
 import '../../models/homework_model.dart';
 import '../../models/emploi.dart';
+import '../../models/conversation_model.dart';
+import '../../models/message_model.dart';
 
 /// Service wrapper pour Firebase Firestore et Auth
 /// Centralise tous les appels à Firebase pour une meilleure maintenabilité
@@ -13,11 +15,9 @@ class FirebaseService {
   final FirebaseFirestore _firestore;
   final fauth.FirebaseAuth _auth;
 
-  FirebaseService({
-    FirebaseFirestore? firestore,
-    fauth.FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? fauth.FirebaseAuth.instance;
+  FirebaseService({FirebaseFirestore? firestore, fauth.FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? fauth.FirebaseAuth.instance;
 
   /// Récupère l'ID utilisateur actuellement authentifié
   String? get currentUserId => _auth.currentUser?.uid;
@@ -33,8 +33,10 @@ class FirebaseService {
   /// Récupère le profil utilisateur depuis Firestore
   Future<User?> getUserProfile(String userId) async {
     try {
-      final doc =
-          await _firestore.collection(FirebaseCollections.users).doc(userId).get();
+      final doc = await _firestore
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .get();
 
       if (!doc.exists) {
         if (kDebugMode) debugPrint('User document not found: $userId');
@@ -84,8 +86,9 @@ class FirebaseService {
   /// Récupère les devoirs
   Future<List<Homework>> getHomeworks() async {
     try {
-      final snapshot =
-          await _firestore.collection(FirebaseCollections.homeworks).get();
+      final snapshot = await _firestore
+          .collection(FirebaseCollections.homeworks)
+          .get();
 
       final homeworks = snapshot.docs
           .map((doc) => Homework.fromFirestore(doc))
@@ -119,8 +122,9 @@ class FirebaseService {
   /// Récupère l'emploi du temps d'une classe
   Future<List<Schedule>> getSchedules(String? classe) async {
     try {
-      final snapshot =
-          await _firestore.collection(FirebaseCollections.schedules).get();
+      final snapshot = await _firestore
+          .collection(FirebaseCollections.schedules)
+          .get();
 
       final schedules = <Schedule>[];
 
@@ -128,8 +132,9 @@ class FirebaseService {
         final data = doc.data();
         final schedule = Schedule.fromFirestore(doc);
 
-        final docClasse =
-            (data[FirebaseFields.classe] ?? data['class'])?.toString().trim();
+        final docClasse = (data[FirebaseFields.classe] ?? data['class'])
+            ?.toString()
+            .trim();
         final myClasse = (classe ?? '').trim();
 
         // Filtre par classe
@@ -162,8 +167,10 @@ class FirebaseService {
   /// Récupère la classe de l'utilisateur
   Future<String?> getUserClasse(String userId) async {
     try {
-      final doc =
-          await _firestore.collection(FirebaseCollections.users).doc(userId).get();
+      final doc = await _firestore
+          .collection(FirebaseCollections.users)
+          .doc(userId)
+          .get();
 
       if (!doc.exists) return null;
 
@@ -182,14 +189,14 @@ class FirebaseService {
   // ============ BATCH OPERATIONS ============
 
   /// Met à jour la photo de profil d'un utilisateur
-  Future<void> updateUserProfilePhoto(String userId, String photoDataUrl) async {
+  Future<void> updateUserProfilePhoto(
+    String userId,
+    String photoDataUrl,
+  ) async {
     try {
-      await _firestore
-          .collection(FirebaseCollections.users)
-          .doc(userId)
-          .update({
-        'photoPath': photoDataUrl,
-      });
+      await _firestore.collection(FirebaseCollections.users).doc(userId).update(
+        {'photoPath': photoDataUrl},
+      );
     } catch (e) {
       if (kDebugMode) debugPrint('Error updating profile photo: $e');
       rethrow;
@@ -226,6 +233,154 @@ class FirebaseService {
           .toList();
     } catch (e) {
       if (kDebugMode) debugPrint('Error getting users by role: $e');
+      rethrow;
+    }
+  }
+
+  // ============ MESSAGING ============
+
+  CollectionReference<Map<String, dynamic>> get _conversationsRef =>
+      _firestore.collection(FirebaseCollections.conversations);
+
+  CollectionReference<Map<String, dynamic>> _messagesRef(
+    String conversationId,
+  ) {
+    return _conversationsRef
+        .doc(conversationId)
+        .collection(FirebaseCollections.messages);
+  }
+
+  String _conversationId(String userAId, String userBId) {
+    final ids = [userAId, userBId]..sort();
+    return '${ids[0]}_${ids[1]}';
+  }
+
+  Stream<List<Conversation>> streamConversations(String userId) {
+    return _conversationsRef
+        .where(FirebaseFields.participants, arrayContains: userId)
+        .orderBy(FirebaseFields.updatedAt, descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Conversation.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  Future<String> getOrCreateConversation({
+    required User currentUser,
+    required User otherUser,
+  }) async {
+    final conversationId = _conversationId(currentUser.id, otherUser.id);
+    final docRef = _conversationsRef.doc(conversationId);
+    final existing = await docRef.get();
+
+    if (!existing.exists) {
+      final now = FieldValue.serverTimestamp();
+      await docRef.set({
+        FirebaseFields.participants: [currentUser.id, otherUser.id],
+        FirebaseFields.participantNames: {
+          currentUser.id: currentUser.fullName,
+          otherUser.id: otherUser.fullName,
+        },
+        FirebaseFields.unreadCounts: {currentUser.id: 0, otherUser.id: 0},
+        'studentId': currentUser.role == UserRoles.student
+            ? currentUser.id
+            : (otherUser.role == UserRoles.student ? otherUser.id : null),
+        'teacherId': currentUser.role == UserRoles.teacher
+            ? currentUser.id
+            : (otherUser.role == UserRoles.teacher ? otherUser.id : null),
+        FirebaseFields.lastMessage: '',
+        FirebaseFields.lastSenderId: null,
+        FirebaseFields.lastMessageAt: null,
+        FirebaseFields.createdAt: now,
+        FirebaseFields.updatedAt: now,
+      });
+    }
+
+    return conversationId;
+  }
+
+  Stream<List<ChatMessage>> streamMessages(String conversationId) {
+    return _messagesRef(conversationId)
+        .orderBy(FirebaseFields.createdAt, descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ChatMessage.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  Future<void> sendMessage({
+    required String conversationId,
+    required User sender,
+    required String text,
+  }) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+
+    final convRef = _conversationsRef.doc(conversationId);
+
+    await _firestore.runTransaction((transaction) async {
+      final convSnap = await transaction.get(convRef);
+      if (!convSnap.exists) {
+        throw Exception('Conversation introuvable');
+      }
+
+      final convData = convSnap.data() ?? <String, dynamic>{};
+      final participants = List<String>.from(
+        convData[FirebaseFields.participants] ?? const [],
+      );
+      if (!participants.contains(sender.id)) {
+        throw Exception('Utilisateur non autorise dans cette conversation');
+      }
+
+      final unread = Map<String, int>.from(
+        (convData[FirebaseFields.unreadCounts] as Map?)?.map(
+              (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0),
+            ) ??
+            <String, int>{},
+      );
+
+      for (final participantId in participants) {
+        if (participantId == sender.id) {
+          unread[participantId] = 0;
+        } else {
+          unread[participantId] = (unread[participantId] ?? 0) + 1;
+        }
+      }
+
+      final messageRef = _messagesRef(conversationId).doc();
+      transaction.set(messageRef, {
+        'conversationId': conversationId,
+        FirebaseFields.senderId: sender.id,
+        FirebaseFields.senderName: sender.fullName,
+        FirebaseFields.text: trimmed,
+        FirebaseFields.createdAt: FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(convRef, {
+        FirebaseFields.lastMessage: trimmed,
+        FirebaseFields.lastSenderId: sender.id,
+        FirebaseFields.lastMessageAt: FieldValue.serverTimestamp(),
+        FirebaseFields.updatedAt: FieldValue.serverTimestamp(),
+        FirebaseFields.unreadCounts: unread,
+      });
+    });
+  }
+
+  Future<void> markConversationAsRead({
+    required String conversationId,
+    required String userId,
+  }) async {
+    try {
+      await _conversationsRef.doc(conversationId).update({
+        '${FirebaseFields.unreadCounts}.$userId': 0,
+        FirebaseFields.updatedAt: FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error marking conversation as read: $e');
       rethrow;
     }
   }

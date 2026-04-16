@@ -1,0 +1,206 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myUserDoc() {
+      return get(/databases/$(database)/documents/utilisateurs/$(request.auth.uid));
+    }
+
+    function myRole() {
+      return signedIn() ? myUserDoc().data.role : null;
+    }
+
+    function isAdmin() {
+      return myRole() == 'admin';
+    }
+
+    function isTeacher() {
+      return myRole() == 'enseignant';
+    }
+
+    function isParent() {
+      return myRole() == 'parent';
+    }
+
+    function isParentOfStudent(studentId) {
+      // L'élève doit déclarer le parent via `parentsIds`.
+      // Exemple doc: utilisateurs/{eleveUid} { role: 'eleve', parentsIds: ['parentUid1', ...] }
+      return signedIn()
+        && studentId is string
+        && get(/databases/$(database)/documents/utilisateurs/$(studentId)).data.role == 'eleve'
+        && get(/databases/$(database)/documents/utilisateurs/$(studentId)).data.parentsIds != null
+        && get(/databases/$(database)/documents/utilisateurs/$(studentId)).data.parentsIds.hasAny([request.auth.uid]);
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // -------------------- UTILISATEURS --------------------
+    // - Lecture: soi-même, admin, ou prof (uniquement élèves)
+    // - Écriture: admin, ou soi-même (champs non sensibles uniquement)
+    match /utilisateurs/{userId} {
+      allow read: if isOwner(userId)
+                  || isAdmin()
+                  || (isTeacher() && resource.data.role == 'eleve')
+                  || (isParent() && resource.data.role == 'eleve' && isParentOfStudent(userId));
+
+      allow create: if isAdmin();
+
+      allow update: if isAdmin() || (isOwner(userId) && canUpdateOwnProfile());
+
+      allow delete: if isAdmin();
+
+      function canUpdateOwnProfile() {
+        // Autorise seulement la mise à jour de champs "profil" non sensibles
+        // (empêche changement role/isActive/classe/classes/matiere etc.)
+        return request.resource.data.diff(resource.data).changedKeys()
+          .hasOnly([
+            'prenom',
+            'nom',
+            'displayName',
+            'phone',
+            'photoPath',
+            'updatedAt'
+          ]);
+      }
+    }
+
+    // -------------------- NOTES --------------------
+    // - Élève: lit uniquement ses notes (eleveId)
+    // - Prof: lit/écrit ses notes (profId)
+    // - Admin: tout
+    match /notes/{noteId} {
+      allow read: if isAdmin()
+                  || (signedIn() && resource.data.eleveId == request.auth.uid)
+                  || (isTeacher() && resource.data.profId == request.auth.uid)
+                  || (isParent() && isParentOfStudent(resource.data.eleveId));
+
+      allow create: if isAdmin() || (isTeacher() && request.resource.data.profId == request.auth.uid);
+      allow update: if isAdmin() || (isTeacher() && resource.data.profId == request.auth.uid);
+      allow delete: if isAdmin() || (isTeacher() && resource.data.profId == request.auth.uid);
+    }
+
+    // -------------------- EMPLOIS --------------------
+    match /emplois/{emploiId} {
+      allow read: if signedIn();
+      allow write: if isAdmin() || isTeacher();
+
+      match /creneaux/{creneauId} {
+        allow read: if signedIn();
+        allow write: if isAdmin() || isTeacher();
+      }
+    }
+
+    // -------------------- DEVOIRS --------------------
+    // Compatible avec le code actuel:
+    // - tous les connectés peuvent lire
+    // - création réservée prof/admin
+    // - statut de rendu géré dans la collection `rendus_devoirs`
+    match /devoirs/{devoirId} {
+      allow read: if signedIn();
+
+      allow create: if isAdmin() || isTeacher();
+
+      allow update: if isAdmin() || isTeacher();
+
+      allow delete: if isAdmin() || isTeacher();
+    }
+
+    // -------------------- RENDUS (DEVOIRS) --------------------
+    // Un document par (devoirId, eleveId)
+    // DocId recommandé côté client: `${devoirId}_${eleveId}`
+    match /rendus_devoirs/{renduId} {
+      allow read: if isAdmin()
+                  || isTeacher()
+                  || (signedIn() && resource.data.eleveId == request.auth.uid)
+                  || (isParent() && isParentOfStudent(resource.data.eleveId));
+
+      allow create: if signedIn()
+                    && request.resource.data.eleveId == request.auth.uid
+                    && request.resource.data.devoirId is string;
+
+      allow update: if signedIn()
+                    && resource.data.eleveId == request.auth.uid
+                    && request.resource.data.eleveId == resource.data.eleveId
+                    && request.resource.data.devoirId == resource.data.devoirId
+                    && request.resource.data.diff(resource.data).changedKeys().hasOnly(['estRendu', 'updatedAt', 'fichier']);
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------- NOTIFICATIONS --------------------
+    match /notifications/{notifId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if isAdmin() || isTeacher();
+
+      // L'utilisateur ne peut marquer que comme lue
+      allow update: if signedIn()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read', 'updatedAt']);
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------- MESSAGERIE --------------------
+    function isConversationParticipant(data) {
+      return signedIn()
+        && data.participants is list
+        && data.participants.hasAny([request.auth.uid]);
+    }
+
+    match /conversations/{conversationId} {
+      allow read: if isAdmin() || isConversationParticipant(resource.data);
+
+      allow create: if isAdmin() || isConversationParticipant(request.resource.data);
+
+      allow update: if isAdmin()
+                    || (
+                      isConversationParticipant(resource.data)
+                      && request.resource.data.diff(resource.data).changedKeys()
+                        .hasOnly([
+                          'participantNames',
+                          'unreadCounts',
+                          'lastMessage',
+                          'lastSenderId',
+                          'lastMessageAt',
+                          'updatedAt'
+                        ])
+                    );
+
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAdmin()
+                    || isConversationParticipant(
+                      get(/databases/$(database)/documents/conversations/$(conversationId)).data
+                    );
+
+        allow create: if isAdmin()
+                      || (
+                        signedIn()
+                        && request.resource.data.senderId == request.auth.uid
+                        && request.resource.data.text is string
+                        && request.resource.data.conversationId == conversationId
+                        && isConversationParticipant(
+                          get(/databases/$(database)/documents/conversations/$(conversationId)).data
+                        )
+                      );
+
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // -------------------- DEFAULT --------------------
+    // Par défaut, on bloque l'écriture (sauf admin), et on autorise la lecture aux connectés.
+    match /{document=**} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
