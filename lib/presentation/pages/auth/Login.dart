@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../controllers/auth_controller.dart';
 import './widgets/role_selector.dart';
 
@@ -11,10 +12,46 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  static const String _rememberMeKey = 'remember_me';
+  static const String _rememberedEmailKey = 'remembered_email';
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool obscurePassword = true;
+  bool _rememberMe = false;
   String? selectedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedCredentials();
+  }
+
+  Future<void> _loadRememberedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
+    final rememberedEmail = prefs.getString(_rememberedEmailKey) ?? '';
+
+    if (!mounted) return;
+
+    setState(() {
+      _rememberMe = rememberMe;
+      if (rememberMe && rememberedEmail.isNotEmpty) {
+        _emailController.text = rememberedEmail;
+      }
+    });
+  }
+
+  Future<void> _persistRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rememberMeKey, _rememberMe);
+
+    if (_rememberMe) {
+      await prefs.setString(_rememberedEmailKey, _emailController.text.trim());
+    } else {
+      await prefs.remove(_rememberedEmailKey);
+    }
+  }
 
   @override
   void dispose() {
@@ -40,6 +77,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     if (success && mounted) {
+      await _persistRememberMe();
       // AuthGate gère automatiquement la navigation
       // Pas besoin de Navigator.push ici
     } else if (!success && mounted) {
@@ -203,13 +241,32 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 10),
 
-                          // Forgot password
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: authController.isLoading ? null : _showForgotPasswordDialog,
-                              child: const Text('Mot de passe oublié ?'),
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CheckboxListTile(
+                                  value: _rememberMe,
+                                  onChanged: authController.isLoading
+                                      ? null
+                                      : (value) {
+                                          setState(() {
+                                            _rememberMe = value ?? false;
+                                          });
+                                        },
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  title: const Text('Se souvenir de moi'),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: authController.isLoading
+                                    ? null
+                                    : _showForgotPasswordDialog,
+                                child: const Text('Mot de passe oublié ?'),
+                              ),
+                            ],
                           ),
 
                           const SizedBox(height: 20),
@@ -219,8 +276,9 @@ class _LoginPageState extends State<LoginPage> {
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
-                              onPressed:
-                                  authController.isLoading ? null : () => _handleLogin(authController),
+                              onPressed: authController.isLoading
+                                  ? null
+                                  : () => _handleLogin(authController),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF2F5EDB),
                                 disabledBackgroundColor: Colors.grey,
@@ -295,9 +353,7 @@ class _LoginPageState extends State<LoginPage> {
             labelText: 'Email',
             hintText: 'votre@email.fr',
             prefixIcon: const Icon(Icons.email),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
         actions: [
@@ -315,16 +371,20 @@ class _LoginPageState extends State<LoginPage> {
                         return;
                       }
 
-                      final success = await authController
-                          .resetPassword(emailController.text.trim());
+                      final success = await authController.resetPassword(
+                        emailController.text.trim(),
+                      );
 
                       if (success && mounted) {
                         Navigator.pop(context);
                         _showSuccess(
-                            'Email de réinitialisation envoyé. Vérifiez votre inbox.');
+                          'Email de réinitialisation envoyé. Vérifiez votre inbox.',
+                        );
                       } else if (mounted) {
                         _showError(
-                            authController.error ?? 'Erreur lors de la réinitialisation');
+                          authController.error ??
+                              'Erreur lors de la réinitialisation',
+                        );
                       }
                     },
               child: const Text('Envoyer'),

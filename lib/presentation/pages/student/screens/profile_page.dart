@@ -46,13 +46,13 @@ class ProfilePage extends StatelessWidget {
             children: [
               // ===== HEADER =====
               SizedBox(
-                height: 360,
+                height: 384,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Container(
                       width: double.infinity,
-                      height: 300,
+                      height: 312,
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           colors: [Color(0xFF4285F4), Color(0xFF2962FF)],
@@ -135,9 +135,9 @@ class ProfilePage extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 22),
+                                const SizedBox(height: 20),
                                 _buildProfileImagePicker(context),
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 12),
                                 Text(
                                   userName,
                                   textAlign: TextAlign.center,
@@ -188,22 +188,16 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     Positioned(
-                      left: 20,
-                      right: 20,
+                      left: 16,
+                      right: 16,
                       bottom: 0,
                       child: Row(
                         children: [
-                          Expanded(
-                            child: _buildStatItem('14.5', 'MOYENNE'),
-                          ),
+                          Expanded(child: _buildStatItem('14.5', 'MOYENNE')),
                           const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatItem('12/28', 'RANG'),
-                          ),
+                          Expanded(child: _buildStatItem('12/28', 'RANG')),
                           const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatItem('95%', 'PRÉSENCE'),
-                          ),
+                          Expanded(child: _buildStatItem('95%', 'PRÉSENCE')),
                         ],
                       ),
                     ),

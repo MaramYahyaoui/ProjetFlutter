@@ -1,18 +1,32 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:image/image.dart' as img;
 
 /// Service pour gérer les uploads d'images
 /// Convertit les images en base64 et crée des data URLs
 class ImageService {
-  /// Max taille image en MB (Firestore limit: 1MB par field)
-  /// On limite à 500KB pour être safe
-  static const int maxSizeMB = 5;
+  // NOTE: stocker une photo en base64 dans Firestore est fragile.
+  // Pour éviter les crashes natifs (SQLiteBlobTooBigException), on force une
+  // version compressée "thumbnail" en JPEG sous une taille sûre.
+
+  /// Taille max acceptée du fichier source (lecture mémoire)
+  static const int _maxInputBytes = 10 * 1024 * 1024; // 10MB
+
+  /// Taille max du JPEG final (avant base64). Base64 ~ +33%.
+  static const int _maxOutputBytes = 160 * 1024; // 160KB
 
   /// Extensions d'images autorisées
-  static const List<String> allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+  static const List<String> allowedExtensions = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+  ];
 
   /// Sélectionne une image depuis l'appareil
   /// Retourne une data URL (base64) si succès, null sinon
@@ -21,6 +35,8 @@ class ImageService {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions,
+        withData: true,
+        withReadStream: true,
       );
 
       if (result == null || result.files.isEmpty) {
@@ -30,33 +46,63 @@ class ImageService {
 
       final file = result.files.single;
 
-      // Vérifier la taille
-      final fileSizeInMB = file.size / (1024 * 1024);
-      if (fileSizeInMB > maxSizeMB) {
+      if (file.size > _maxInputBytes) {
         debugPrint(
-          'Image trop grande: ${fileSizeInMB.toStringAsFixed(2)}MB (max: ${maxSizeMB}MB)',
+          'Image trop grande: ${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB (max: ${(_maxInputBytes / (1024 * 1024)).toStringAsFixed(0)}MB)',
         );
         return null;
       }
 
       // Récupérer les bytes de l'image
-      final bytes = file.bytes;
+      Uint8List? bytes = file.bytes;
+
+      // Fallback Android/Desktop: lire depuis le path si bytes non fournis
+      if (bytes == null || bytes.isEmpty) {
+        final path = file.path;
+        if (path != null && path.isNotEmpty) {
+          try {
+            bytes = await File(path).readAsBytes();
+          } catch (e) {
+            debugPrint('Erreur lecture fichier image via path: $e');
+          }
+        }
+      }
+
+      // Fallback: lire depuis le stream si disponible
+      if (bytes == null || bytes.isEmpty) {
+        final stream = file.readStream;
+        if (stream != null) {
+          final builder = BytesBuilder(copy: false);
+          await for (final chunk in stream) {
+            builder.add(chunk);
+          }
+          bytes = builder.takeBytes();
+        }
+      }
+
       if (bytes == null || bytes.isEmpty) {
         debugPrint('Impossible de lire les bytes de l\'image');
         return null;
       }
 
-      // Convertir en base64
-      final base64String = base64Encode(bytes);
+      // Compresser/redimensionner pour Firestore (évite base64 énorme)
+      final compressedBytes = await _compressToFirestoreSafeJpeg(bytes);
+      if (compressedBytes.isEmpty) {
+        debugPrint('Compression image échouée');
+        return null;
+      }
 
-      // Déterminer le MIME type
-      final mimeType = _getMimeType(file.extension ?? 'jpg');
+      // Convertir en base64
+      final base64String = base64Encode(compressedBytes);
+
+      // Stocker en JPEG (compact)
+      const mimeType = 'image/jpeg';
 
       // Créer une data URL
       final dataUrl = 'data:$mimeType;base64,$base64String';
 
       debugPrint(
-        'Image convertie en data URL - Taille: ${(dataUrl.length / 1024).toStringAsFixed(2)}KB',
+        'Image compressée en data URL - Input: ${(bytes.length / 1024).toStringAsFixed(1)}KB, Output: ${(compressedBytes.length / 1024).toStringAsFixed(1)}KB, DataUrl: ${(dataUrl.length / 1024).toStringAsFixed(1)}KB',
       );
 
       return dataUrl;
@@ -76,27 +122,25 @@ class ImageService {
         return null;
       }
 
-      // Vérifier la taille
-      final fileSizeInMB = bytes.length / (1024 * 1024);
-      if (fileSizeInMB > maxSizeMB) {
+      if (bytes.length > _maxInputBytes) {
         debugPrint(
-          'Image trop grande: ${fileSizeInMB.toStringAsFixed(2)}MB (max: ${maxSizeMB}MB)',
+          'Image trop grande: ${(bytes.length / (1024 * 1024)).toStringAsFixed(2)}MB (max: ${(_maxInputBytes / (1024 * 1024)).toStringAsFixed(0)}MB)',
         );
         return null;
       }
 
-      // Convertir en base64
-      final base64String = base64Encode(bytes);
+      final compressedBytes = await _compressToFirestoreSafeJpeg(bytes);
+      if (compressedBytes.isEmpty) {
+        debugPrint('Compression image échouée');
+        return null;
+      }
 
-      // Déterminer le MIME type
-      final extension = imageFile.path.split('.').last.toLowerCase();
-      final mimeType = _getMimeType(extension);
-
-      // Créer une data URL
+      final base64String = base64Encode(compressedBytes);
+      const mimeType = 'image/jpeg';
       final dataUrl = 'data:$mimeType;base64,$base64String';
 
       debugPrint(
-        'Fichier converti en data URL - Taille: ${(dataUrl.length / 1024).toStringAsFixed(2)}KB',
+        'Fichier compressé en data URL - Input: ${(bytes.length / 1024).toStringAsFixed(1)}KB, Output: ${(compressedBytes.length / 1024).toStringAsFixed(1)}KB, DataUrl: ${(dataUrl.length / 1024).toStringAsFixed(1)}KB',
       );
 
       return dataUrl;
@@ -106,20 +150,55 @@ class ImageService {
     }
   }
 
-  /// Obtient le MIME type basé sur l'extension
-  static String _getMimeType(String extension) {
-    switch (extension.toLowerCase()) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      default:
-        return 'image/jpeg';
+  static Future<Uint8List> _compressToFirestoreSafeJpeg(Uint8List input) async {
+    // Décode l'image (jpeg/png/webp/gif...).
+    final decoded = img.decodeImage(input);
+    if (decoded == null) {
+      debugPrint('Impossible de décoder l\'image pour compression');
+      return Uint8List(0);
+    }
+
+    // On essaye plusieurs tailles + qualités jusqu'à passer sous la limite.
+    // (Ordre: resize d'abord, puis quality)
+    const targetSizes = [512, 384, 320, 256, 192];
+    const qualities = [85, 75, 65, 55, 45, 35];
+
+    for (final maxSide in targetSizes) {
+      final resized = _resizeKeepAspect(decoded, maxSide);
+      for (final q in qualities) {
+        final jpg = img.encodeJpg(resized, quality: q);
+        if (jpg.length <= _maxOutputBytes) {
+          return Uint8List.fromList(jpg);
+        }
+      }
+    }
+
+    // Dernier recours: très petit + qualité basse.
+    final tiny = _resizeKeepAspect(decoded, 160);
+    final jpg = img.encodeJpg(tiny, quality: 25);
+    if (jpg.length <= _maxOutputBytes) {
+      return Uint8List.fromList(jpg);
+    }
+
+    debugPrint(
+      'Image toujours trop grosse après compression: ${(jpg.length / 1024).toStringAsFixed(1)}KB (max ${( _maxOutputBytes / 1024).toStringAsFixed(0)}KB)',
+    );
+    return Uint8List(0);
+  }
+
+  static img.Image _resizeKeepAspect(img.Image src, int maxSide) {
+    final w = src.width;
+    final h = src.height;
+    if (w <= maxSide && h <= maxSide) return src;
+
+    if (w >= h) {
+      final newW = maxSide;
+      final newH = (h * (maxSide / w)).round().clamp(1, maxSide);
+      return img.copyResize(src, width: newW, height: newH);
+    } else {
+      final newH = maxSide;
+      final newW = (w * (maxSide / h)).round().clamp(1, maxSide);
+      return img.copyResize(src, width: newW, height: newH);
     }
   }
 
@@ -129,9 +208,7 @@ class ImageService {
     int maxWidth = 800,
     int maxHeight = 800,
   }) async {
-    // Note: Pour la compression, il faudrait ajouter image_picker avec compression
-    // ou utiliser flutter_image compressor
-    // Pour maintenant, on se contente de pickAndConvertToDataUrl()
+    // Conservé pour compat: désormais pickAndConvertToDataUrl() compresse déjà.
     return pickAndConvertToDataUrl();
   }
 

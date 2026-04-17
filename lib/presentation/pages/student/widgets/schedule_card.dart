@@ -4,56 +4,56 @@ import '../../../../models/emploi.dart';
 class ScheduleCard extends StatelessWidget {
   final Schedule schedule;
 
-  const ScheduleCard({
-    super.key,
-    required this.schedule,
-  });
+  const ScheduleCard({super.key, required this.schedule});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _getColor().withOpacity(0.3),
-          width: 2,
-        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _getColor().withOpacity(0.18), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 4,
-            height: 60,
+            width: 5,
+            height: 70,
             decoration: BoxDecoration(
               color: _getColor(),
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(999),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  schedule.subject,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        schedule.subject,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(
@@ -61,17 +61,23 @@ class ScheduleCard extends StatelessWidget {
                       size: 16,
                       color: Colors.grey[600],
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      schedule.teacher ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        schedule.teacher?.trim().isNotEmpty == true
+                            ? schedule.teacher!
+                            : 'Professeur non renseigné',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Icon(
@@ -79,12 +85,15 @@ class ScheduleCard extends StatelessWidget {
                       size: 16,
                       color: Colors.grey[600],
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Text(
-                      schedule.classroom,
+                      schedule.classroom.isNotEmpty
+                          ? schedule.classroom
+                          : 'Salle non renseignée',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                        fontSize: 13,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -92,28 +101,21 @@ class ScheduleCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: _getColor().withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${schedule.startTime} - ${schedule.endTime}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: _getColor(),
-                  ),
-                ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: _getColor().withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${schedule.startTime} - ${schedule.endTime}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _getColor(),
               ),
-            ],
+            ),
           ),
         ],
       ),

@@ -71,9 +71,19 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Saisie des Notes'),
         elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: const Text(
+          'Saisie des notes',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Consumer<TeacherController>(
         builder: (context, controller, _) {
@@ -86,15 +96,24 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.assignment_outlined,
-                      size: 48,
-                      color: Colors.grey.shade400,
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.assignment_outlined,
+                        size: 48,
+                        color: Colors.purple.shade400,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Aucune classe assignée',
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
@@ -109,41 +128,118 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFormSection(
-                    'Informations de l\'évaluation',
-                    [
-                      _buildClassDropdown(controller),
-                      const SizedBox(height: 16),
-                      _buildMatiereDropdown(controller),
-                      const SizedBox(height: 16),
-                      _buildStudentDropdown(),
-                      const SizedBox(height: 16),
-                      _buildEvaluationTypeDropdown(),
-                      const SizedBox(height: 16),
-                      _buildDatePicker(context),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildFormSection(
-                    'Résultats',
-                    [
-                      _buildNoteField(),
-                      const SizedBox(height: 16),
-                      _buildCoefficientField(),
-                      const SizedBox(height: 16),
-                      _buildCommentField(),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: _submitForm,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Enregistrer la note'),
+                  // Carte d'informations d'évaluation
+                  _buildGradientCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.assignment_outlined,
+                                color: Colors.purple.shade700,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Informations de l\'évaluation',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    'Complétez tous les champs',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _buildClassDropdown(controller),
+                        const SizedBox(height: 14),
+                        _buildMatiereDropdown(controller),
+                        const SizedBox(height: 14),
+                        _buildEvaluationTypeDropdown(),
+                        const SizedBox(height: 14),
+                        _buildDatePicker(context),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  
+                  // Carte des résultats
+                  _buildGradientCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.assessment_outlined,
+                                color: Colors.green.shade700,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Résultats',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: _buildNoteField(),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildCoefficientField(),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _buildCommentField(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Sélection d'élève
+                  _buildStudentSection(),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Bouton soumettre
+                  _buildSubmitButton(),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -154,31 +250,153 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
     );
   }
 
-  Widget _buildFormSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+  Widget _buildGradientCard({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children,
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildStudentSection() {
+    return _buildGradientCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.people_outline,
+                  color: Colors.blue.shade700,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Sélectionner un élève',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildStudentDropdown(),
+          if (_selectedStudentId != null) ...[
+            const SizedBox(height: 16),
+            _buildSelectedStudentCard(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedStudentCard() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade400, Colors.blue.shade600],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Icon(Icons.person, color: Colors.white, size: 24),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Élève sélectionné',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                ),
+                Text(
+                  _selectedStudentId ?? '',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.check_circle, color: Colors.blue.shade600),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.purple.shade400, Colors.purple.shade600],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _submitForm,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  'Enregistrer la note',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -187,10 +405,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       value: _selectedClass,
       decoration: InputDecoration(
         labelText: 'Classe',
-        prefixIcon: const Icon(Icons.school),
+        prefixIcon: const Icon(Icons.school_outlined),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: controller.classes
           .map((className) => DropdownMenuItem(
@@ -217,10 +436,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       value: _selectedMatiere,
       decoration: InputDecoration(
         labelText: 'Matière',
-        prefixIcon: const Icon(Icons.subject),
+        prefixIcon: const Icon(Icons.subject_outlined),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: controller.subjects
           .map((subject) => DropdownMenuItem(
@@ -247,10 +467,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       value: _selectedStudentId,
       decoration: InputDecoration(
         labelText: 'Élève',
-        prefixIcon: const Icon(Icons.person),
+        prefixIcon: const Icon(Icons.person_outlined),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: _students
           .map((id) => DropdownMenuItem(
@@ -277,10 +498,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       value: _selectedEvaluationType,
       decoration: InputDecoration(
         labelText: 'Type d\'évaluation',
-        prefixIcon: const Icon(Icons.assignment),
+        prefixIcon: const Icon(Icons.assignment_outlined),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: _evaluationTypes
           .map((type) => DropdownMenuItem(
@@ -320,13 +542,15 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: 'Date de l\'évaluation',
-          prefixIcon: const Icon(Icons.calendar_today),
+          prefixIcon: const Icon(Icons.calendar_today_outlined),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
           ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         child: Text(
-          '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+          '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
+          style: const TextStyle(fontSize: 14),
         ),
       ),
     );
@@ -338,10 +562,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
         labelText: 'Note (0-20)',
-        prefixIcon: const Icon(Icons.grade),
+        prefixIcon: const Icon(Icons.assignment_outlined),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         suffixText: '/20',
       ),
       validator: (value) {
@@ -362,19 +587,20 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       controller: _coefficientController,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
-        labelText: 'Coefficient',
-        prefixIcon: const Icon(Icons.scale),
+        labelText: 'Coeff',
+        prefixIcon: const Icon(Icons.scale_outlined),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Entrez un coefficient';
+          return 'Requis';
         }
         final coeff = double.tryParse(value);
         if (coeff == null || coeff <= 0) {
-          return 'Le coefficient doit être supérieur à 0';
+          return 'Invalide';
         }
         return null;
       },
@@ -387,10 +613,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       maxLines: 3,
       decoration: InputDecoration(
         labelText: 'Commentaires (facultatif)',
-        prefixIcon: const Icon(Icons.comment),
+        prefixIcon: const Icon(Icons.comment_outlined),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -398,6 +625,46 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) {
       return;
+    }
+
+    // Show loading dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation(Colors.purple),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Enregistrement en cours...',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
     }
 
     final gradeEntry = GradeEntry(
@@ -414,29 +681,150 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
 
     final success = await _controller.addGradeEntry(gradeEntry);
 
+    if (mounted) {
+      Navigator.of(context).pop(); // Fermer la dialog de chargement
+    }
+
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Note enregistrée avec succès'),
-          backgroundColor: Colors.green,
+      // Afficher dialog de succès
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 40,
+                    color: Colors.green.shade600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Note enregistrée!',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${_selectedMatiere} - ${_noteController.text}/20',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // Reset form
+                      _formKey.currentState!.reset();
+                      _noteController.clear();
+                      _coefficientController.text = '1';
+                      _commentController.clear();
+                      _selectedClass = null;
+                      _selectedMatiere = null;
+                      _selectedStudentId = null;
+                      _selectedEvaluationType = null;
+                      _selectedDate = DateTime.now();
+                      setState(() {});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Ajouter une autre note',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
-
-      // Reset form
-      _formKey.currentState!.reset();
-      _noteController.clear();
-      _coefficientController.text = '1';
-      _commentController.clear();
-      _selectedClass = null;
-      _selectedMatiere = null;
-      _selectedStudentId = null;
-      _selectedEvaluationType = null;
-      _selectedDate = DateTime.now();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erreur lors de l\'enregistrement'),
-          backgroundColor: Colors.red,
+      // Afficher dialog d'erreur
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.error_outline,
+                    size: 40,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Erreur!',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Impossible d\'enregistrer la note',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Réessayer',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }

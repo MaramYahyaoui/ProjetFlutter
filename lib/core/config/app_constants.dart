@@ -13,7 +13,7 @@ class FirebaseCollections {
   static const String emplois = schedules;
 }
 
-/// User roles constants
+/// User roles 
 class UserRoles {
   static const String student = 'eleve';
   static const String teacher = 'enseignant';

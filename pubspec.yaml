@@ -22,6 +22,9 @@ dependencies:
   # File picker
   file_picker: ^8.0.0+1
 
+  # Image processing (resize/compress) - pure Dart
+  image: ^4.5.4
+
   # Cupertino icons (iOS style icons)
   cupertino_icons: ^1.0.8
   

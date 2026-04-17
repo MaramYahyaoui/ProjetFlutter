@@ -77,13 +77,13 @@ class AdminProfilePage extends StatelessWidget {
           child: Column(
             children: [
               SizedBox(
-                height: 280,
+                height: 292,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Container(
                       width: double.infinity,
-                      height: 200,
+                      height: 212,
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           colors: [Color(0xFFFF7A00), Color(0xFFFF4D00)],
@@ -134,7 +134,7 @@ class AdminProfilePage extends StatelessWidget {
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const SizedBox(height: 22),
+                                const SizedBox(height: 18),
                                 _buildProfileImagePicker(context),
                                 const SizedBox(height: 14),
                                 Text(
@@ -244,9 +244,7 @@ class AdminProfilePage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 18),
-                    _LogoutButton(
-                      onTap: () => _signOut(context),
-                    ),
+                    _LogoutButton(onTap: () => _signOut(context)),
                   ],
                 ),
               ),
@@ -257,7 +255,6 @@ class AdminProfilePage extends StatelessWidget {
     );
   }
 }
-
 
 class _InfoCard extends StatelessWidget {
   final String title;

@@ -271,9 +271,8 @@ class TeacherController extends ChangeNotifier {
             'salle': creneauxMap['salle'] ?? docData['salle'],
             'professeur': creneauxMap['professeur'] ?? docData['professeur'],
           };
-          
-          final fakeDoc = _createFakeDocSnapshot(doc.id, mergedData);
-          final schedule = Schedule.fromFirestore(fakeDoc);
+
+          final schedule = _scheduleFromData(doc.id, mergedData);
           allSchedules.add(schedule);
           
           debugPrint('✅ Schedule créé: ${schedule.subject} (prof: ${schedule.teacher}, jour: ${schedule.dayOfWeek}, ${schedule.startTime}-${schedule.endTime})');
@@ -309,10 +308,32 @@ class TeacherController extends ChangeNotifier {
     }
   }
 
-  /// Helper pour créer un DocumentSnapshot fake
-  DocumentSnapshot _createFakeDocSnapshot(String id, Map<String, dynamic> data) {
-    // Créer un mock DocumentSnapshot
-    return _FakeDocumentSnapshot(id, data);
+  Schedule _scheduleFromData(String id, Map<String, dynamic> data) {
+    return Schedule(
+      id: id,
+      subject: (data['matiere'] ?? '').toString().trim(),
+      teacher: (data['professeur'] ?? '').toString().trim(),
+      classroom: (data['salle'] ?? '').toString().trim(),
+      dayOfWeek: _parseDayOfWeek(data['jour_semaine'] ?? data['jour_semain']),
+      startTime: (data['debut'] ?? '08:00').toString().trim(),
+      endTime: (data['fin'] ?? '10:00').toString().trim(),
+      type: (data['type'] ?? 'professeur').toString().trim(),
+      ownerId: (data['ownerId'] ?? data['eleveId'] ?? data['professeurId'])
+          ?.toString()
+          .trim(),
+      color: data['color']?.toString(),
+    );
+  }
+
+  int _parseDayOfWeek(dynamic value) {
+    if (value is int && value >= 1 && value <= 7) {
+      return value;
+    }
+    final parsed = int.tryParse(value?.toString() ?? '');
+    if (parsed != null && parsed >= 1 && parsed <= 7) {
+      return parsed;
+    }
+    return 1;
   }
 
   /// Sélectionne une classe et charge ses statistiques
@@ -437,6 +458,43 @@ class TeacherController extends ChangeNotifier {
     }
   }
 
+  // ================== DEVOIRS (ASSIGNMENTS) ==================
+
+  /// Attribue un devoir à une classe (création dans la collection `devoirs`).
+  /// Le rendu de chaque élève est géré séparément dans `rendus_devoirs`.
+  Future<bool> addHomework({
+    required String classe,
+    required String matiere,
+    required String titre,
+    required String description,
+    required DateTime dateLimite,
+    Map<String, dynamic>? fichier,
+  }) async {
+    try {
+      final trimmedClasse = classe.trim();
+      final trimmedMatiere = matiere.trim();
+      final trimmedTitre = titre.trim();
+      final trimmedDescription = description.trim();
+
+      await _firestore.collection('devoirs').add({
+        'classe': trimmedClasse,
+        'matiere': trimmedMatiere,
+        'titre': trimmedTitre,
+        'description': trimmedDescription,
+        'dateLimite': Timestamp.fromDate(dateLimite),
+        'estRendu': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdBy': uid,
+        if (fichier != null) 'fichier': fichier,
+      });
+
+      return true;
+    } catch (e) {
+      debugPrint('❌ Erreur addHomework: $e');
+      return false;
+    }
+  }
+
   /// Retourne toutes les notes d'une matière
   List<GradeEntry> getSubjectGrades(String matiere) {
     return _gradeEntries.where((g) => g.matiere == matiere).toList();
@@ -511,33 +569,4 @@ class TeacherController extends ChangeNotifier {
     _classStatisticsMap.clear();
     super.dispose();
   }
-}
-
-/// Classe helper pour créer un DocumentSnapshot fake
-class _FakeDocumentSnapshot implements DocumentSnapshot {
-  final String _id;
-  final Map<String, dynamic> _data;
-
-  _FakeDocumentSnapshot(this._id, this._data);
-
-  @override
-  String get id => _id;
-
-  @override
-  Map<String, dynamic>? data() => _data;
-
-  @override
-  bool get exists => true;
-
-  @override
-  DocumentReference get reference => throw UnimplementedError();
-
-  @override
-  SnapshotMetadata get metadata => throw UnimplementedError();
-
-  @override
-  dynamic get(Object field) => throw UnimplementedError();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

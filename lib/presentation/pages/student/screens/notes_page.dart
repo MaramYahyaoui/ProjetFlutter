@@ -8,7 +8,12 @@ import '../../../../models/note_model.dart';
 import '../../notifications/notifications_page.dart';
 
 class NotesPage extends StatefulWidget {
-  const NotesPage({super.key});
+  final bool showBackButton;
+
+  const NotesPage({
+    super.key,
+    this.showBackButton = true,
+  });
 
   @override
   State<NotesPage> createState() => _NotesPageState();
@@ -85,10 +90,13 @@ class _NotesPageState extends State<NotesPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: widget.showBackButton,
+        leading: widget.showBackButton
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         title: const Text(
           'Mes Notes',
           style: TextStyle(

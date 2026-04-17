@@ -59,13 +59,9 @@ class AuthController extends ChangeNotifier {
   /// Cette méthode est appelée dans le constructeur
   void _initAuthState() {
     final firebaseUser = _auth.currentUser;
-    
-    // Au startup, on n'essaie pas de charger le profil
-    // On juste vérifie si quelqu'un est connecté à Firebase
-    // Le profil sera chargé lors du login
+
     if (firebaseUser != null) {
-      // Y a une session Firebase active, mais on fait pas de loading détaillé des données
-      // Au lieu de ça, on appelle checkAuthState() au démarrage pour recharger le profil complètement
+      
       _setLoading(true);
       checkAuthState();
     } else {

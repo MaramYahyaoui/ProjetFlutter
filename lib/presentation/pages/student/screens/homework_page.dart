@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/student_controller.dart';
 import '../../../../models/homework_model.dart';
 import '../../notifications/notifications_page.dart';
 
 class HomeworkPage extends StatefulWidget {
-  const HomeworkPage({super.key});
+  final bool showBackButton;
+
+  const HomeworkPage({
+    super.key,
+    this.showBackButton = true,
+  });
 
   @override
   State<HomeworkPage> createState() => _HomeworkPageState();
@@ -67,6 +73,9 @@ class _HomeworkPageState extends State<HomeworkPage> {
   Widget build(BuildContext context) {
     return Consumer<StudentController>(
       builder: (context, controller, child) {
+        final authController = context.read<AuthController>();
+        final canCreateHomework =
+            authController.isTeacher || authController.isAdmin;
         final allHomeworks = controller.homeworks;
         final pendingHomeworks = controller.getPendingHomeworks();
         final completedHomeworks = controller.getCompletedHomeworks();
@@ -94,10 +103,13 @@ class _HomeworkPageState extends State<HomeworkPage> {
           appBar: AppBar(
             backgroundColor: Colors.white,
             elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black87),
-              onPressed: () => Navigator.pop(context),
-            ),
+            automaticallyImplyLeading: widget.showBackButton,
+            leading: widget.showBackButton
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                : null,
             title: const Text(
               'Devoirs',
               style: TextStyle(
@@ -251,11 +263,13 @@ class _HomeworkPageState extends State<HomeworkPage> {
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _showAddHomeworkForm(context),
-            backgroundColor: Colors.blue,
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
+          floatingActionButton: canCreateHomework
+              ? FloatingActionButton(
+                  onPressed: () => _showAddHomeworkForm(context),
+                  backgroundColor: Colors.blue,
+                  child: const Icon(Icons.add, color: Colors.white),
+                )
+              : null,
         );
       },
     );
@@ -307,22 +321,25 @@ class _HomeworkPageState extends State<HomeworkPage> {
         _subjectAbbr[homework.subject] ??
         homework.subject.substring(0, 2).toUpperCase();
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return InkWell(
+      onTap: () => _showHomeworkDetails(context, homework),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Subject Avatar
           Container(
             width: 48,
@@ -405,10 +422,25 @@ class _HomeworkPageState extends State<HomeworkPage> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  void _showHomeworkDetails(BuildContext context, Homework homework) {
+    final controller = context.read<StudentController>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _HomeworkDetailsSheet(
+        controller: controller,
+        homework: homework,
+      ),
+    );
+  }
+
 
   void _showAddHomeworkForm(BuildContext context) {
     _selectedMatiere = null;
@@ -867,3 +899,291 @@ class _HomeworkPageState extends State<HomeworkPage> {
     }
   }
 }
+
+class _HomeworkDetailsSheet extends StatefulWidget {
+  final StudentController controller;
+  final Homework homework;
+
+  const _HomeworkDetailsSheet({
+    required this.controller,
+    required this.homework,
+  });
+
+  @override
+  State<_HomeworkDetailsSheet> createState() => _HomeworkDetailsSheetState();
+}
+
+class _HomeworkDetailsSheetState extends State<_HomeworkDetailsSheet> {
+  PlatformFile? _selectedFile;
+
+  bool get _isLate {
+    final due = widget.homework.dueDate.toDate();
+    return DateTime.now().isAfter(due);
+  }
+
+  String _fileTypeLabel(String? nameOrExt) {
+    final lower = (nameOrExt ?? '').toLowerCase();
+    final ext = lower.contains('.') ? lower.split('.').last : lower;
+    switch (ext) {
+      case 'zip':
+      case 'rar':
+      case '7z':
+        return 'Archive compressée';
+      case 'pdf':
+        return 'PDF';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return 'Image';
+      case 'doc':
+      case 'docx':
+        return 'Document';
+      default:
+        return 'Fichier';
+    }
+  }
+
+  Future<void> _pickFile() async {
+    if (_isLate) return;
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'zip', 'rar', '7z', 'doc', 'docx'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _selectedFile = result.files.single;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de la sélection du fichier: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sheetHeight = MediaQuery.of(context).size.height * 0.48;
+
+    return Container(
+      height: sheetHeight,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: AnimatedBuilder(
+          animation: widget.controller,
+          builder: (context, _) {
+            final controller = widget.controller;
+            final isSubmitted = widget.homework.isCompleted;
+            final submittedFile =
+                controller.getHomeworkSubmissionFile(widget.homework.id);
+            final submittedName = (submittedFile?['nom'] as String?)?.trim();
+            final activeFileName =
+                (_selectedFile?.name ?? submittedName ?? '').trim();
+
+            final canSubmit =
+                !_isLate && !isSubmitted && activeFileName.isNotEmpty;
+            final canCancel = !_isLate && isSubmitted;
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      const Text(
+                        'Vos devoirs',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        isSubmitted ? 'Remis' : 'Attribué',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isSubmitted ? Colors.green[700] : Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Add or show submission file
+                  if (activeFileName.isEmpty) ...[
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _isLate ? null : _pickFile,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Ajouter ou créer'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  activeFileName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _fileTypeLabel(activeFileName),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.insert_drive_file, color: Colors.blue[700]),
+                          )
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: canCancel
+                          ? () async {
+                              await widget.controller.cancelHomeworkSubmission(
+                                devoirId: widget.homework.id,
+                              );
+                              if (mounted) Navigator.pop(context);
+                            }
+                          : null,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        "Annuler l'envoi",
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: canSubmit
+                          ? () async {
+                              final file = _selectedFile;
+                              final fichier = <String, dynamic>{
+                                'nom': file?.name ?? activeFileName,
+                                'url': '',
+                                'type': file?.extension ?? '',
+                                'taille': file?.size ?? 0,
+                              };
+                              await widget.controller.setHomeworkSubmission(
+                                devoirId: widget.homework.id,
+                                fichier: fichier,
+                                estRendu: true,
+                              );
+                              if (mounted) Navigator.pop(context);
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Remettre',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  if (_isLate)
+                    Center(
+                      child: Text(
+                        'Le devoir ne peut pas être remis après la\n date limite',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+

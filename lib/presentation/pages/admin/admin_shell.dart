@@ -46,17 +46,34 @@ class _AdminShellState extends State<AdminShell> {
         ],
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(Icons.home_rounded, 'Home', 0),
-              _buildNavItem(Icons.people_alt_rounded, 'Utilisateurs', 1),
-              _buildNavItem(Icons.bar_chart_rounded, 'Rapports', 2),
-              _buildNavItem(Icons.settings_rounded, 'Paramètres', 3),
-              _buildNavItem(Icons.person_rounded, 'Profil', 4),
-            ],
+        top: false,
+        left: false,
+        right: false,
+        child: SizedBox(
+          height: 72,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(child: _buildNavItem(Icons.home_rounded, 'Home', 0)),
+                Expanded(
+                  child: _buildNavItem(
+                    Icons.people_alt_rounded,
+                    'Utilisateurs',
+                    1,
+                  ),
+                ),
+                Expanded(
+                  child: _buildNavItem(Icons.bar_chart_rounded, 'Rapports', 2),
+                ),
+                Expanded(
+                  child: _buildNavItem(Icons.settings_rounded, 'Paramètres', 3),
+                ),
+                Expanded(
+                  child: _buildNavItem(Icons.person_rounded, 'Profil', 4),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -67,27 +84,37 @@ class _AdminShellState extends State<AdminShell> {
     final isSelected = _selectedIndex == index;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _selectedIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF7A00) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: isSelected ? Colors.white : Colors.grey[600]),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[600],
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
+      child: SizedBox.expand(
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFFF7A00) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: isSelected ? Colors.white : Colors.grey[600]),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.grey[600],
+                    fontSize: 10,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
