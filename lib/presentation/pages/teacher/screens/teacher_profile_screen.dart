@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../controllers/teacher_controller.dart';
 import '../../../../controllers/auth_controller.dart';
+import '../../../widgets/user_profile_image_picker.dart';
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -14,6 +17,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
+  late String? _photoDataUrl;
   bool _isEditingProfile = false;
 
   @override
@@ -23,6 +27,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     _firstNameController = TextEditingController(text: controller.firstName);
     _lastNameController = TextEditingController(text: controller.lastName);
     _phoneController = TextEditingController(text: controller.phone);
+    _photoDataUrl = controller.photoPath.isNotEmpty
+        ? controller.photoPath
+        : null;
   }
 
   @override
@@ -101,41 +108,21 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             padding: const EdgeInsets.symmetric(vertical: 32),
             child: Column(
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                    image: controller.photoPath.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(controller.photoPath),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: controller.photoPath.isEmpty
-                      ? const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 40,
-                        )
-                      : null,
-                ),
+                _buildProfileAvatar(photoPath: controller.photoPath, size: 80),
                 const SizedBox(height: 16),
                 Text(
                   controller.displayName,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Professeur',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white70,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
               ],
             ),
@@ -190,10 +177,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               children: [
                 Text(
                   'Informations personnelles',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _buildInfoCard(
@@ -206,7 +192,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   context,
                   icon: Icons.phone,
                   label: 'Téléphone',
-                  value: controller.phone.isNotEmpty ? controller.phone : 'Non renseigné',
+                  value: controller.phone.isNotEmpty
+                      ? controller.phone
+                      : 'Non renseigné',
                 ),
               ],
             ),
@@ -221,10 +209,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               children: [
                 Text(
                   'Matières enseignées',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (controller.subjects.isEmpty)
@@ -237,10 +224,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: controller.subjects
-                        .map((subject) => Chip(
-                          label: Text(subject),
-                          backgroundColor: Colors.purple.withOpacity(0.1),
-                        ))
+                        .map(
+                          (subject) => Chip(
+                            label: Text(subject),
+                            backgroundColor: Colors.purple.withOpacity(0.1),
+                          ),
+                        )
                         .toList(),
                   ),
               ],
@@ -256,10 +245,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               children: [
                 Text(
                   'Classes assignées',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ListView.builder(
@@ -277,17 +265,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.class_,
-                            color: Colors.purple,
-                          ),
+                          Icon(Icons.class_, color: Colors.purple),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               className,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -313,10 +296,21 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         children: [
           Text(
             'Modifier le profil',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: UserProfileImagePicker(
+              initialPhotoDataUrl: _photoDataUrl,
+              onImagePicked: (dataUrl) {
+                setState(() {
+                  _photoDataUrl = dataUrl;
+                });
+              },
+              size: 110,
+            ),
           ),
           const SizedBox(height: 24),
           TextField(
@@ -361,6 +355,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   firstName: _firstNameController.text,
                   lastName: _lastNameController.text,
                   phone: _phoneController.text,
+                  photoPath: _photoDataUrl,
                 );
 
                 if (success && mounted) {
@@ -398,8 +393,53 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     );
   }
 
-  Widget _buildProfileStat(BuildContext context,
-      {required String value, required String label, required IconData icon}) {
+  Widget _buildProfileAvatar({
+    required String photoPath,
+    required double size,
+  }) {
+    final imageProvider = _buildImageProvider(photoPath);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        image: imageProvider != null
+            ? DecorationImage(image: imageProvider, fit: BoxFit.cover)
+            : null,
+      ),
+      child: imageProvider == null
+          ? Icon(Icons.person, color: Colors.white, size: size * 0.5)
+          : null,
+    );
+  }
+
+  ImageProvider? _buildImageProvider(String photoPath) {
+    if (photoPath.isEmpty) return null;
+
+    if (photoPath.startsWith('http')) {
+      return NetworkImage(photoPath);
+    }
+
+    if (photoPath.startsWith('data:image')) {
+      try {
+        final bytes = base64Decode(photoPath.split(',').last);
+        return MemoryImage(bytes);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  Widget _buildProfileStat(
+    BuildContext context, {
+    required String value,
+    required String label,
+    required IconData icon,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -413,10 +453,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
@@ -429,8 +468,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context,
-      {required IconData icon, required String label, required String value}) {
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -447,17 +490,13 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),

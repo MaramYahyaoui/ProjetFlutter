@@ -45,7 +45,9 @@ class _TeacherDashboardContentState extends State<_TeacherDashboardContent> {
       builder: (context, controller, _) {
         return Scaffold(
           body: [
-            const TeacherHomeScreen(),
+            TeacherHomeScreen(
+              onOpenMessages: () => setState(() => _selectedIndex = 4),
+            ),
             const TeacherClassesScreen(),
             const GradeEntryScreen(),
             const TeacherTimetableScreen(),

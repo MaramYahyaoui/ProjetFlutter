@@ -11,6 +11,7 @@ import '../student/screens/notes_page.dart';
 import '../student/screens/schedule_page.dart';
 import '../messages/conversations_page.dart';
 import '../../widgets/user_profile_image_picker.dart';
+import '../../widgets/recent_messages_preview.dart';
 
 class ParentDashboard extends StatefulWidget {
   const ParentDashboard({super.key});
@@ -206,6 +207,7 @@ class _ParentHomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<StudentController>();
+    final currentUser = context.watch<AuthController>().user;
     final average = controller.getAverage();
     final pendingCount = controller.getPendingHomeworks().length;
     final recentNotes = [...controller.notes]
@@ -273,7 +275,7 @@ class _ParentHomeTab extends StatelessWidget {
                     title: 'Contacter',
                     subtitle: 'Un professeur',
                     accent: const Color(0xFF2F6DF6),
-                    onTap: onOpenNotes,
+                    onTap: onOpenMessages,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -350,6 +352,14 @@ class _ParentHomeTab extends StatelessWidget {
                 ),
               ),
             ),
+            if (currentUser != null) ...[
+              const SizedBox(height: 28),
+              RecentMessagesPreview(
+                currentUser: currentUser,
+                onOpenAll: onOpenMessages,
+                accentColor: const Color(0xFF09C15C),
+              ),
+            ],
           ],
         ),
       ),

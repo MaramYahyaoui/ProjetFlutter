@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/teacher_controller.dart';
+import '../../../widgets/recent_messages_preview.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
-  const TeacherHomeScreen({super.key});
+  final VoidCallback onOpenMessages;
+
+  const TeacherHomeScreen({super.key, required this.onOpenMessages});
 
   @override
   State<TeacherHomeScreen> createState() => _TeacherHomeScreenState();
@@ -24,6 +28,8 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   Widget build(BuildContext context) {
     return Consumer<TeacherController>(
       builder: (context, controller, _) {
+        final currentUser = context.watch<AuthController>().user;
+
         return SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -46,14 +52,15 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.calendar_month,
-                              color: Colors.white, size: 20),
+                          const Icon(
+                            Icons.calendar_month,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'lundi 30 mars',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: Colors.white),
                           ),
                         ],
@@ -61,9 +68,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       const SizedBox(height: 16),
                       Text(
                         'Bonjour, ${controller.displayName}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
+                        style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -152,10 +157,9 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                 // Mes classes section
                 Text(
                   'Mes Classes',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 if (controller.isLoading)
@@ -180,6 +184,14 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       return _buildClassCard(context, classe);
                     },
                   ),
+                if (currentUser != null) ...[
+                  const SizedBox(height: 28),
+                  RecentMessagesPreview(
+                    currentUser: currentUser,
+                    onOpenAll: widget.onOpenMessages,
+                    accentColor: const Color(0xFF7B3FF2),
+                  ),
+                ],
               ],
             ),
           ),
@@ -188,7 +200,10 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     );
   }
 
-  void _showAddHomeworkSheet(BuildContext context, TeacherController controller) {
+  void _showAddHomeworkSheet(
+    BuildContext context,
+    TeacherController controller,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -218,16 +233,12 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           const SizedBox(height: 12),
           Text(
             value,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
@@ -249,27 +260,18 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
               color: Colors.purple.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              Icons.class_,
-              color: Colors.purple,
-              size: 24,
-            ),
+            child: Icon(Icons.class_, color: Colors.purple, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
               className,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: Colors.grey,
-          ),
+          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
         ],
       ),
     );
@@ -322,7 +324,17 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'zip', 'rar', '7z', 'doc', 'docx'],
+        allowedExtensions: [
+          'pdf',
+          'jpg',
+          'jpeg',
+          'png',
+          'zip',
+          'rar',
+          '7z',
+          'doc',
+          'docx',
+        ],
       );
 
       if (result != null && result.files.isNotEmpty) {
@@ -494,13 +506,11 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
                       ),
                       items: widget.controller.classes
                           .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c),
-                            ),
+                            (c) => DropdownMenuItem(value: c, child: Text(c)),
                           )
                           .toList(),
-                      onChanged: (value) => setState(() => _selectedClasse = value),
+                      onChanged: (value) =>
+                          setState(() => _selectedClasse = value),
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Veuillez sélectionner une classe'
                           : null,
@@ -536,13 +546,11 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
                       ),
                       items: _matieres
                           .map(
-                            (m) => DropdownMenuItem(
-                              value: m,
-                              child: Text(m),
-                            ),
+                            (m) => DropdownMenuItem(value: m, child: Text(m)),
                           )
                           .toList(),
-                      onChanged: (value) => setState(() => _selectedMatiere = value),
+                      onChanged: (value) =>
+                          setState(() => _selectedMatiere = value),
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Veuillez sélectionner une matière'
                           : null,
@@ -639,7 +647,11 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_today, color: Colors.grey[600], size: 18),
+                            Icon(
+                              Icons.calendar_today,
+                              color: Colors.grey[600],
+                              size: 18,
+                            ),
                             const SizedBox(width: 12),
                             Text(
                               _selectedDate == null
@@ -671,7 +683,10 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
                       onTap: _pickFile,
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey[50],
                           borderRadius: BorderRadius.circular(12),
@@ -679,11 +694,16 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.attach_file, color: Colors.blue, size: 20),
+                            const Icon(
+                              Icons.attach_file,
+                              color: Colors.blue,
+                              size: 20,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                _selectedFile?.name ?? 'Ajouter une pièce jointe',
+                                _selectedFile?.name ??
+                                    'Ajouter une pièce jointe',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -697,8 +717,13 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
                             ),
                             if (_selectedFile != null)
                               IconButton(
-                                onPressed: () => setState(() => _selectedFile = null),
-                                icon: const Icon(Icons.close, color: Colors.grey, size: 18),
+                                onPressed: () =>
+                                    setState(() => _selectedFile = null),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.grey,
+                                  size: 18,
+                                ),
                               ),
                           ],
                         ),
@@ -735,4 +760,3 @@ class _TeacherAddHomeworkSheetState extends State<_TeacherAddHomeworkSheet> {
     );
   }
 }
-

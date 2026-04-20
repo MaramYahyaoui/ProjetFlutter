@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../controllers/student_controller.dart';
+import '../../../../controllers/auth_controller.dart';
 import '../../../../models/note_model.dart';
 import '../../../../models/emploi.dart';
 import '../screens/notes_page.dart';
@@ -8,6 +9,8 @@ import '../screens/schedule_page.dart';
 import '../screens/homework_page.dart';
 import '../screens/profile_page.dart';
 import '../../notifications/notifications_page.dart';
+import '../../messages/conversations_page.dart';
+import '../../../widgets/recent_messages_preview.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -37,9 +40,31 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   String _getFormattedDate() {
     final now = DateTime.now();
-    final days = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-    final months = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
-                    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    final days = [
+      '',
+      'lundi',
+      'mardi',
+      'mercredi',
+      'jeudi',
+      'vendredi',
+      'samedi',
+      'dimanche',
+    ];
+    final months = [
+      '',
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
+    ];
     return '${days[now.weekday]} ${now.day} ${months[now.month]}';
   }
 
@@ -52,14 +77,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
       body: controller.isLoading
           ? const Center(child: CircularProgressIndicator())
           : _selectedIndex == 0
-              ? _buildDashboard(controller)
-              : _selectedIndex == 1
-                  ? const NotesPage()
-                  : _selectedIndex == 2
-                      ? const SchedulePage()
-                      : _selectedIndex == 3
-                          ? const HomeworkPage()
-                          : const ProfilePage(),
+          ? _buildDashboard(controller)
+          : _selectedIndex == 1
+          ? const NotesPage()
+          : _selectedIndex == 2
+          ? const SchedulePage()
+          : _selectedIndex == 3
+          ? const HomeworkPage()
+          : _selectedIndex == 4
+          ? const _StudentMessagesTab()
+          : const ProfilePage(),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -80,15 +107,25 @@ class _StudentDashboardState extends State<StudentDashboard> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home_rounded, 'Accueil', 0),
-              _buildNavItem(Icons.grade_rounded, 'Notes', 1),
-              _buildNavItem(Icons.calendar_today_rounded, 'Emploi', 2),
-              _buildNavItem(Icons.assignment_rounded, 'Devoirs', 3),
-              _buildNavItem(Icons.person_rounded, 'Profil', 4),
+              Expanded(child: _buildNavItem(Icons.home_rounded, 'Accueil', 0)),
+              Expanded(child: _buildNavItem(Icons.grade_rounded, 'Notes', 1)),
+              Expanded(
+                child: _buildNavItem(Icons.calendar_today_rounded, 'Emploi', 2),
+              ),
+              Expanded(
+                child: _buildNavItem(Icons.assignment_rounded, 'Devoirs', 3),
+              ),
+              Expanded(
+                child: _buildNavItem(
+                  Icons.chat_bubble_outline_rounded,
+                  'Messages',
+                  4,
+                ),
+              ),
+              Expanded(child: _buildNavItem(Icons.person_rounded, 'Profil', 5)),
             ],
           ),
         ),
@@ -102,7 +139,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF4285F4) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -110,16 +148,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                color: isSelected ? Colors.white : Colors.grey[600]),
+            Icon(icon, color: isSelected ? Colors.white : Colors.grey[600]),
             const SizedBox(height: 4),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.grey[600],
-                fontSize: 12,
-                fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -131,6 +169,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
   // ================= DASHBOARD =================
 
   Widget _buildDashboard(StudentController controller) {
+    final currentUser = context.watch<AuthController>().user;
     final notes = controller.notes;
     final schedules = controller.schedules;
     final pendingHomeworks = controller.getPendingHomeworks();
@@ -153,8 +192,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         );
 
         if (courseTime.hour > now.hour ||
-            (courseTime.hour == now.hour &&
-                courseTime.minute > now.minute)) {
+            (courseTime.hour == now.hour && courseTime.minute > now.minute)) {
           nextCourse = course;
           break;
         }
@@ -162,8 +200,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
     }
 
     final displayName = controller.displayName.trim().isNotEmpty
-      ? controller.displayName.trim()
-      : 'Élève';
+        ? controller.displayName.trim()
+        : 'Élève';
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -214,8 +252,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         Stack(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.notifications_outlined,
-                                  color: Colors.white, size: 28),
+                              icon: const Icon(
+                                Icons.notifications_outlined,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                               onPressed: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -312,8 +353,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle_outline,
-                              color: Colors.green[400], size: 24),
+                          Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.green[400],
+                            size: 24,
+                          ),
                           const SizedBox(width: 12),
                           const Text(
                             "Aucun cours restant aujourd'hui",
@@ -386,7 +430,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
 
@@ -431,7 +475,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
 
@@ -452,7 +496,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       ),
                     )
                   else
-                    ...todayCourses.take(2).map((course) => _buildCourseCard(course)),
+                    ...todayCourses
+                        .take(2)
+                        .map((course) => _buildCourseCard(course)),
 
                   const SizedBox(height: 28),
 
@@ -477,11 +523,22 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ...pendingHomeworks.take(2).map((hw) => _buildHomeworkCard(hw)),
+                    ...pendingHomeworks
+                        .take(2)
+                        .map((hw) => _buildHomeworkCard(hw)),
+                  ],
+
+                  if (currentUser != null) ...[
+                    const SizedBox(height: 28),
+                    RecentMessagesPreview(
+                      currentUser: currentUser,
+                      onOpenAll: () => setState(() => _selectedIndex = 4),
+                      accentColor: const Color(0xFF2F6DF6),
+                    ),
                   ],
                 ],
               ),
@@ -557,20 +614,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     const SizedBox(width: 4),
                     Text(
                       '${course.startTime} - ${course.endTime}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                     const SizedBox(width: 12),
                     Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
                       course.classroom,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                   ],
                 ),
@@ -628,24 +679,15 @@ class _StudentDashboardState extends State<StudentDashboard> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black87,
-            ),
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
           ),
           Text(
             sublabel,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
           ),
         ],
       ),
@@ -712,20 +754,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 const SizedBox(height: 4),
                 Text(
                   note.type,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
                 ),
               ],
             ),
           ),
           Text(
             note.note.toStringAsFixed(1),
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -789,7 +825,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     fontSize: 15,
                   ),
                 ),
-              
+
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -797,20 +833,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     const SizedBox(width: 4),
                     Text(
                       '${course.startTime} - ${course.endTime}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                     const SizedBox(width: 12),
                     Icon(Icons.location_on, size: 12, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
                       course.classroom,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                   ],
                 ),
@@ -863,10 +893,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 const SizedBox(height: 4),
                 Text(
                   homework.matiere,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
@@ -887,8 +914,24 @@ class _StudentDashboardState extends State<StudentDashboard> {
       'Jeudi',
       'Vendredi',
       'Samedi',
-      'Dimanche'
+      'Dimanche',
     ];
     return days[weekday];
+  }
+}
+
+class _StudentMessagesTab extends StatelessWidget {
+  const _StudentMessagesTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthController>().user;
+    if (user == null) {
+      return const Center(
+        child: Text('Connecte-toi pour accéder à la messagerie.'),
+      );
+    }
+
+    return ConversationsPage(currentUser: user);
   }
 }

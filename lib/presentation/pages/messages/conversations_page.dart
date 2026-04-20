@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/config/app_constants.dart';
@@ -17,6 +19,58 @@ class ConversationsPage extends StatefulWidget {
 
 class _ConversationsPageState extends State<ConversationsPage> {
   final FirebaseService _firebaseService = FirebaseService();
+
+  Future<User?> _loadOtherUserProfile(Conversation conversation) async {
+    try {
+      final otherUserId = conversation.participants.firstWhere(
+        (id) => id != widget.currentUser.id,
+        orElse: () => '',
+      );
+      if (otherUserId.isEmpty) return null;
+      return await _firebaseService.getUserProfile(otherUserId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _buildAvatar({
+    required String initials,
+    String? photoPath,
+    double radius = 22,
+  }) {
+    final hasPhoto = photoPath != null && photoPath.isNotEmpty;
+
+    if (hasPhoto && photoPath.startsWith('http')) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: NetworkImage(photoPath),
+      );
+    }
+
+    if (hasPhoto && photoPath.startsWith('data:image')) {
+      try {
+        final bytes = base64Decode(photoPath.split(',').last);
+        return CircleAvatar(
+          radius: radius,
+          backgroundImage: MemoryImage(bytes),
+        );
+      } catch (_) {
+        // Fallback sur les initiales si data URL invalide.
+      }
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: const Color(0xFFE8F8EF),
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: Color(0xFF09C15C),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
 
   Future<List<User>> _loadAvailableRecipients() async {
     final role = widget.currentUser.role;
@@ -82,15 +136,9 @@ class _ConversationsPageState extends State<ConversationsPage> {
               itemBuilder: (context, index) {
                 final recipient = recipients[index];
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFE8F8EF),
-                    child: Text(
-                      _initials(recipient.fullName),
-                      style: const TextStyle(
-                        color: Color(0xFF09C15C),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                  leading: _buildAvatar(
+                    initials: _initials(recipient.fullName),
+                    photoPath: recipient.photoPath,
                   ),
                   title: Text(recipient.fullName),
                   subtitle: Text(
@@ -220,16 +268,15 @@ class _ConversationsPageState extends State<ConversationsPage> {
                           ),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                radius: 22,
-                                backgroundColor: const Color(0xFFE8F8EF),
-                                child: Text(
-                                  _initials(title),
-                                  style: const TextStyle(
-                                    color: Color(0xFF09C15C),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                              FutureBuilder<User?>(
+                                future: _loadOtherUserProfile(conversation),
+                                builder: (context, snapshot) {
+                                  return _buildAvatar(
+                                    radius: 22,
+                                    initials: _initials(title),
+                                    photoPath: snapshot.data?.photoPath,
+                                  );
+                                },
                               ),
                               const SizedBox(width: 12),
                               Expanded(
