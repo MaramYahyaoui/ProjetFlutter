@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../controllers/teacher_controller.dart';
 import '../../../../controllers/auth_controller.dart';
+import '../../notifications/notifications_page.dart';
+import '../../settings/change_password_page.dart';
+import '../../../widgets/notification_bell_button.dart';
 import '../../../widgets/user_profile_image_picker.dart';
+
+enum _ProfileMenuAction { edit, changePassword, notifications, logout }
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -47,10 +52,17 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         title: const Text('Mon Profil'),
         elevation: 0,
         actions: [
+          const NotificationBellButton(
+            iconColor: Colors.black87,
+            iconSize: 24,
+            dense: true,
+          ),
           if (!_isEditingProfile)
-            PopupMenuButton(
-              itemBuilder: (context) => [
-                PopupMenuItem(
+            PopupMenuButton<_ProfileMenuAction>(
+              onSelected: _handleMenuAction,
+              itemBuilder: (context) => const [
+                PopupMenuItem<_ProfileMenuAction>(
+                  value: _ProfileMenuAction.edit,
                   child: const Row(
                     children: [
                       Icon(Icons.edit),
@@ -58,13 +70,29 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       Text('Modifier'),
                     ],
                   ),
-                  onTap: () {
-                    setState(() {
-                      _isEditingProfile = true;
-                    });
-                  },
                 ),
-                PopupMenuItem(
+                PopupMenuItem<_ProfileMenuAction>(
+                  value: _ProfileMenuAction.changePassword,
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_outline),
+                      SizedBox(width: 12),
+                      Text('Changer le mot de passe'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<_ProfileMenuAction>(
+                  value: _ProfileMenuAction.notifications,
+                  child: Row(
+                    children: [
+                      Icon(Icons.notifications_outlined),
+                      SizedBox(width: 12),
+                      Text('Notifications'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<_ProfileMenuAction>(
+                  value: _ProfileMenuAction.logout,
                   child: const Row(
                     children: [
                       Icon(Icons.logout),
@@ -72,9 +100,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       Text('Déconnexion'),
                     ],
                   ),
-                  onTap: () {
-                    _logout(context);
-                  },
                 ),
               ],
             ),
@@ -237,6 +262,47 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           ),
           const SizedBox(height: 24),
 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Compte et sécurité',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildActionTile(
+                  context,
+                  icon: Icons.lock_outline,
+                  title: 'Changer le mot de passe',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ChangePasswordPage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildActionTile(
+                  context,
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Classes section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -286,6 +352,29 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         ],
       ),
     );
+  }
+
+  void _handleMenuAction(_ProfileMenuAction action) {
+    switch (action) {
+      case _ProfileMenuAction.edit:
+        setState(() {
+          _isEditingProfile = true;
+        });
+        break;
+      case _ProfileMenuAction.changePassword:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ChangePasswordPage()));
+        break;
+      case _ProfileMenuAction.notifications:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
+        break;
+      case _ProfileMenuAction.logout:
+        _logout(context);
+        break;
+    }
   }
 
   Widget _buildEditMode(BuildContext context, TeacherController controller) {
@@ -502,6 +591,33 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        leading: Icon(icon, color: Colors.purple),
+        title: Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        trailing: const Icon(Icons.chevron_right),
       ),
     );
   }

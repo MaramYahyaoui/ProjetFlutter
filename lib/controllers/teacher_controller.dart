@@ -83,12 +83,9 @@ class TeacherController extends ChangeNotifier {
     try {
       // Charger le profil EN PREMIER
       await loadProfile();
-      
+
       // Puis charger les autres données
-      await Future.wait([
-        loadGradeEntries(),
-        loadSchedules(),
-      ]);
+      await Future.wait([loadGradeEntries(), loadSchedules()]);
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -107,12 +104,9 @@ class TeacherController extends ChangeNotifier {
     try {
       // Charger le profil EN PREMIER
       await loadProfile();
-      
+
       // Puis charger les autres données
-      await Future.wait([
-        loadGradeEntries(),
-        loadSchedules(),
-      ]);
+      await Future.wait([loadGradeEntries(), loadSchedules()]);
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -135,7 +129,8 @@ class TeacherController extends ChangeNotifier {
 
       _firstName = (data['prenom'] as String?)?.trim();
       _lastName = (data['nom'] as String?)?.trim();
-      _displayName = (data['displayName'] as String?)?.trim() ??
+      _displayName =
+          (data['displayName'] as String?)?.trim() ??
           (data['name'] as String?)?.trim();
       _email = (data['email'] as String?)?.trim();
       _phone = (data['phone'] as String?)?.trim();
@@ -143,7 +138,9 @@ class TeacherController extends ChangeNotifier {
       _subjects = List<String>.from((data['matiere'] as List?) ?? []);
       _classes = List<String>.from((data['classes'] as List?) ?? []);
 
-      debugPrint('👤 Profil chargé: firstName=$_firstName, lastName=$_lastName, displayName=$_displayName');
+      debugPrint(
+        '👤 Profil chargé: firstName=$_firstName, lastName=$_lastName, displayName=$_displayName',
+      );
 
       notifyListeners();
     } catch (e) {
@@ -176,17 +173,15 @@ class TeacherController extends ChangeNotifier {
   Future<void> loadSchedules() async {
     try {
       // Charger TOUS les emplois (pas de filtre par type)
-      final snapshot = await _firestore
-          .collection('emplois')
-          .get();
+      final snapshot = await _firestore.collection('emplois').get();
 
       // Construire les noms possibles du professeur
       final names = <String>[];
-      
+
       final firstName = (_firstName ?? '').trim().toLowerCase();
       final lastName = (_lastName ?? '').trim().toLowerCase();
       final displayName = this.displayName.trim().toLowerCase();
-      
+
       if (firstName.isNotEmpty) names.add(firstName);
       if (lastName.isNotEmpty) names.add(lastName);
       if (displayName.isNotEmpty) names.add(displayName);
@@ -196,75 +191,97 @@ class TeacherController extends ChangeNotifier {
       }
 
       debugPrint('🔍 TOP: Filtrage emplois avec noms: $names');
-      debugPrint('   firstName="$firstName", lastName="$lastName", displayName="$displayName"');
-      
+      debugPrint(
+        '   firstName="$firstName", lastName="$lastName", displayName="$displayName"',
+      );
+
       debugPrint('📊 Total emplois en base: ${snapshot.docs.length}');
-      
+
       // Afficher les professeurs disponibles pour le debug
       final allTeachers = snapshot.docs
-          .map((doc) => ((doc.data()['professeur'] as String?) ?? '').trim().toLowerCase())
+          .map(
+            (doc) => ((doc.data()['professeur'] as String?) ?? '')
+                .trim()
+                .toLowerCase(),
+          )
           .toSet()
           .toList();
       debugPrint('👨‍🏫 Professeurs dispo: $allTeachers');
-      
+
       // Debug: afficher les 3 premiers emplois complets
       for (int i = 0; i < snapshot.docs.take(3).length; i++) {
         final doc = snapshot.docs[i];
         final data = doc.data();
         debugPrint('   📌 Emploi $i (${doc.id}):');
         debugPrint('      Toutes les clés: ${data.keys.toList()}');
-        debugPrint('      professeur="${data['professeur']}", type="${data['type']}"');
-        debugPrint('      matiere="${data['matiere']}", salle="${data['salle']}"');
-        debugPrint('      jour_semaine=${data['jour_semaine']}, ownerId="${data['ownerId']}"');
+        debugPrint(
+          '      professeur="${data['professeur']}", type="${data['type']}"',
+        );
+        debugPrint(
+          '      matiere="${data['matiere']}", salle="${data['salle']}"',
+        );
+        debugPrint(
+          '      jour_semaine=${data['jour_semaine']}, ownerId="${data['ownerId']}"',
+        );
         // Afficher TOUTES les clés et valeurs pour debug
         data.forEach((key, value) {
           debugPrint('      $key: $value (type: ${value.runtimeType})');
         });
       }
-      
+
       // Charger les emplois avec leurs subcollections creneaux
       final allSchedules = <Schedule>[];
-      
+
       for (final doc in snapshot.docs) {
         final docData = doc.data();
         final teacher = (docData['professeur'] as String? ?? '').trim();
-        
-        debugPrint('🔎 Vérification Emploi ${doc.id}: prof="$teacher", ownerId="${docData['ownerId']}"');
-        
+
+        debugPrint(
+          '🔎 Vérification Emploi ${doc.id}: prof="$teacher", ownerId="${docData['ownerId']}"',
+        );
+
         // Vérifier si cet emploi correspond au professeur
         final schedTeacher = teacher.toLowerCase();
-        final matches = names.any((name) => 
-          schedTeacher == name || 
-          schedTeacher.contains(name) ||
-          name.contains(schedTeacher)
+        final matches = names.any(
+          (name) =>
+              schedTeacher == name ||
+              schedTeacher.contains(name) ||
+              name.contains(schedTeacher),
         );
-        
+
         if (!matches && docData['ownerId'] != uid) {
-          debugPrint('⏭️ Emploi ${doc.id} ignoré (prof: $teacher, ownerId: ${docData['ownerId']})');
+          debugPrint(
+            '⏭️ Emploi ${doc.id} ignoré (prof: $teacher, ownerId: ${docData['ownerId']})',
+          );
           continue;
         }
-        
+
         debugPrint('✓ Emploi ${doc.id} correspond');
-        
+
         // Vérifier s'il y a un champ creneaux (map imbriquée)
         final creneauxMap = docData['creneaux'] as Map<String, dynamic>?;
-        
+
         if (creneauxMap == null || creneauxMap.isEmpty) {
           // Si pas de creneaux, utiliser les données du document root
           debugPrint('   ↳ Pas de creneaux, utilisant données root');
           final schedule = Schedule.fromFirestore(doc);
           if (schedule.subject.isNotEmpty) {
             allSchedules.add(schedule);
-            debugPrint('✅ Schedule créé: ${schedule.subject} (prof: ${schedule.teacher}, jour: ${schedule.dayOfWeek})');
+            debugPrint(
+              '✅ Schedule créé: ${schedule.subject} (prof: ${schedule.teacher}, jour: ${schedule.dayOfWeek})',
+            );
           }
         } else {
           // Si creneaux existe comme map, créer une Schedule
-          debugPrint('   ↳ Creneau trouvé: matiere="${creneauxMap['matiere']}", jour=${docData['jour_semaine']}');
-          
+          debugPrint(
+            '   ↳ Creneau trouvé: matiere="${creneauxMap['matiere']}", jour=${docData['jour_semaine']}',
+          );
+
           // Fusionner les données root avec creneaux
           final mergedData = {
             ...docData,
-            'jour_semaine': docData['jour_semaine'], // Garder jour_semaine du root
+            'jour_semaine':
+                docData['jour_semaine'], // Garder jour_semaine du root
             'debut': creneauxMap['debut'],
             'fin': creneauxMap['fin'],
             'matiere': creneauxMap['matiere'] ?? docData['matiere'],
@@ -274,8 +291,10 @@ class TeacherController extends ChangeNotifier {
 
           final schedule = _scheduleFromData(doc.id, mergedData);
           allSchedules.add(schedule);
-          
-          debugPrint('✅ Schedule créé: ${schedule.subject} (prof: ${schedule.teacher}, jour: ${schedule.dayOfWeek}, ${schedule.startTime}-${schedule.endTime})');
+
+          debugPrint(
+            '✅ Schedule créé: ${schedule.subject} (prof: ${schedule.teacher}, jour: ${schedule.dayOfWeek}, ${schedule.startTime}-${schedule.endTime})',
+          );
         }
       }
 
@@ -357,6 +376,7 @@ class TeacherController extends ChangeNotifier {
       if (classGrades.isEmpty) {
         _currentClassStatistics = const GradeStatistics(
           average: 0,
+          median: 0,
           successRate: 0,
           evaluationCount: 0,
           studentCount: 0,
@@ -365,14 +385,34 @@ class TeacherController extends ChangeNotifier {
         );
       } else {
         final scores = classGrades.map((g) => g.note).toList();
+        scores.sort();
+
+        // Calcul de la moyenne
         final average = scores.reduce((a, b) => a + b) / scores.length;
+
+        // Calcul de la médiane
+        final median = scores.length.isEven
+            ? (scores[scores.length ~/ 2 - 1] + scores[scores.length ~/ 2]) / 2
+            : scores[scores.length ~/ 2].toDouble();
+
+        // Taux de réussite (note >= 10)
         final successCount = scores.where((s) => s >= 10).length;
         final successRate = scores.isNotEmpty
             ? ((successCount / scores.length) * 100).toDouble()
             : 0.0;
-        
+
+        // Distribution des notes par plage
+        final distribution = <String, int>{
+          '0-5': scores.where((s) => s >= 0 && s < 5).length,
+          '5-10': scores.where((s) => s >= 5 && s < 10).length,
+          '10-14': scores.where((s) => s >= 10 && s < 14).length,
+          '14-17': scores.where((s) => s >= 14 && s < 17).length,
+          '17-20': scores.where((s) => s >= 17 && s <= 20).length,
+        };
+
         _currentClassStatistics = GradeStatistics(
           average: average,
+          median: median,
           successRate: successRate,
           evaluationCount: classGrades.length,
           studentCount: classGrades
@@ -381,6 +421,8 @@ class TeacherController extends ChangeNotifier {
               .length, // Nombre d'élèves distincts
           minScore: scores.reduce((a, b) => a < b ? a : b),
           maxScore: scores.reduce((a, b) => a > b ? a : b),
+          scoreDistribution: distribution,
+          allScores: scores,
         );
       }
 
@@ -399,6 +441,8 @@ class TeacherController extends ChangeNotifier {
           .doc(gradeEntry.id)
           .set(gradeEntry.toFirestore());
 
+      await _notifyNewGrade(gradeEntry);
+
       _gradeEntries.add(gradeEntry);
       _gradeEntries.sort((a, b) => b.date.compareTo(a.date));
 
@@ -412,6 +456,82 @@ class TeacherController extends ChangeNotifier {
       debugPrint('❌ Erreur addGradeEntry: $e');
       return false;
     }
+  }
+
+  Future<void> _notifyNewGrade(GradeEntry gradeEntry) async {
+    try {
+      final studentDoc = await _firestore
+          .collection('utilisateurs')
+          .doc(gradeEntry.eleveId)
+          .get();
+
+      final studentData = studentDoc.data() ?? {};
+      final studentName = _buildDisplayName(
+        studentData,
+        fallback: gradeEntry.eleveId,
+      );
+
+      final recipients = <String>{gradeEntry.eleveId};
+
+      final parentsIds =
+          (studentData['parentsIds'] as List?)
+              ?.map((e) => e.toString().trim())
+              .where((id) => id.isNotEmpty)
+              .toList() ??
+          const <String>[];
+      recipients.addAll(parentsIds);
+
+      if (recipients.isEmpty) return;
+
+      final title = 'Nouvelle note publiée';
+      final body =
+          '$studentName a reçu ${gradeEntry.note.toStringAsFixed(2)}/20 en ${gradeEntry.matiere}';
+
+      final batch = _firestore.batch();
+      for (final recipientId in recipients) {
+        final docRef = _firestore.collection('notifications').doc();
+        batch.set(docRef, {
+          'userId': recipientId,
+          'title': title,
+          'body': body,
+          'type': 'grade',
+          'read': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'source': 'teacher_grade_entry',
+          'profId': uid,
+          'eleveId': gradeEntry.eleveId,
+          'noteId': gradeEntry.id,
+          'matiere': gradeEntry.matiere,
+          'note': gradeEntry.note,
+        });
+      }
+
+      await batch.commit();
+    } catch (e) {
+      // La notification ne doit jamais bloquer l'enregistrement de la note.
+      debugPrint('❌ Erreur notification nouvelle note: $e');
+    }
+  }
+
+  String _buildDisplayName(
+    Map<String, dynamic> data, {
+    required String fallback,
+  }) {
+    final displayName = (data['displayName'] as String?)?.trim() ?? '';
+    if (displayName.isNotEmpty) return displayName;
+
+    final name = (data['name'] as String?)?.trim() ?? '';
+    if (name.isNotEmpty) return name;
+
+    final firstName = (data['prenom'] as String?)?.trim() ?? '';
+    final lastName = (data['nom'] as String?)?.trim() ?? '';
+    final fullName = [
+      firstName,
+      lastName,
+    ].where((part) => part.isNotEmpty).join(' ').trim();
+    if (fullName.isNotEmpty) return fullName;
+
+    return fallback;
   }
 
   /// Met à jour une note

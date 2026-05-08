@@ -23,11 +23,12 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
   DateTime _selectedDate = DateTime.now();
 
   final TextEditingController _noteController = TextEditingController();
-  final TextEditingController _coefficientController =
-      TextEditingController(text: '1');
+  final TextEditingController _coefficientController = TextEditingController(
+    text: '1',
+  );
   final TextEditingController _commentController = TextEditingController();
 
-  List<String> _students = [];
+  List<_StudentOption> _students = [];
 
   final List<String> _evaluationTypes = [
     'Contrôle',
@@ -51,13 +52,50 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
           .get();
 
       setState(() {
-        _students = snapshot.docs
-            .map((doc) => doc.id)
-            .toList();
+        _students =
+            snapshot.docs
+                .map(
+                  (doc) => _StudentOption(
+                    id: doc.id,
+                    name: _resolveStudentName(doc.data(), doc.id),
+                  ),
+                )
+                .toList()
+              ..sort(
+                (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+              );
       });
     } catch (e) {
       debugPrint('❌ Erreur loadStudents: $e');
     }
+  }
+
+  String _resolveStudentName(Map<String, dynamic> data, String fallbackId) {
+    final firstName = (data['prenom'] as String?)?.trim() ?? '';
+    final lastName = (data['nom'] as String?)?.trim() ?? '';
+    final fullName = [
+      firstName,
+      lastName,
+    ].where((part) => part.isNotEmpty).join(' ').trim();
+
+    if (fullName.isNotEmpty) return fullName;
+
+    final displayName =
+        (data['displayName'] as String?)?.trim() ??
+        (data['name'] as String?)?.trim() ??
+        '';
+    if (displayName.isNotEmpty) return displayName;
+
+    return fallbackId;
+  }
+
+  String _selectedStudentLabel() {
+    final selectedId = _selectedStudentId;
+    if (selectedId == null || selectedId.isEmpty) return '';
+
+    final selected = _students.where((s) => s.id == selectedId);
+    if (selected.isEmpty) return selectedId;
+    return selected.first.name;
   }
 
   @override
@@ -112,8 +150,8 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                     Text(
                       'Aucune classe assignée',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -161,9 +199,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                                   ),
                                   Text(
                                     'Complétez tous les champs',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
+                                    style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(color: Colors.grey.shade600),
                                   ),
                                 ],
@@ -183,7 +219,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Carte des résultats
                   _buildGradientCard(
                     child: Column(
@@ -206,9 +242,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                             const SizedBox(width: 12),
                             Text(
                               'Résultats',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ],
@@ -216,14 +250,9 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                         const SizedBox(height: 20),
                         Row(
                           children: [
-                            Expanded(
-                              flex: 2,
-                              child: _buildNoteField(),
-                            ),
+                            Expanded(flex: 2, child: _buildNoteField()),
                             const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildCoefficientField(),
-                            ),
+                            Expanded(child: _buildCoefficientField()),
                           ],
                         ),
                         const SizedBox(height: 14),
@@ -235,9 +264,9 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
 
                   // Sélection d'élève
                   _buildStudentSection(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Bouton soumettre
                   _buildSubmitButton(),
                   const SizedBox(height: 16),
@@ -290,10 +319,9 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
               const SizedBox(width: 12),
               Text(
                 'Sélectionner un élève',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -338,15 +366,15 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
               children: [
                 Text(
                   'Élève sélectionné',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey.shade600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
                 ),
                 Text(
-                  _selectedStudentId ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  _selectedStudentLabel(),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -406,16 +434,17 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       decoration: InputDecoration(
         labelText: 'Classe',
         prefixIcon: const Icon(Icons.school_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: controller.classes
-          .map((className) => DropdownMenuItem(
-                value: className,
-                child: Text(className),
-              ))
+          .map(
+            (className) =>
+                DropdownMenuItem(value: className, child: Text(className)),
+          )
           .toList(),
       onChanged: (value) {
         setState(() {
@@ -437,16 +466,16 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       decoration: InputDecoration(
         labelText: 'Matière',
         prefixIcon: const Icon(Icons.subject_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: controller.subjects
-          .map((subject) => DropdownMenuItem(
-                value: subject,
-                child: Text(subject),
-              ))
+          .map(
+            (subject) => DropdownMenuItem(value: subject, child: Text(subject)),
+          )
           .toList(),
       onChanged: (value) {
         setState(() {
@@ -468,16 +497,17 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       decoration: InputDecoration(
         labelText: 'Élève',
         prefixIcon: const Icon(Icons.person_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: _students
-          .map((id) => DropdownMenuItem(
-                value: id,
-                child: Text('Élève $id'),
-              ))
+          .map(
+            (student) =>
+                DropdownMenuItem(value: student.id, child: Text(student.name)),
+          )
           .toList(),
       onChanged: (value) {
         setState(() {
@@ -499,16 +529,14 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       decoration: InputDecoration(
         labelText: 'Type d\'évaluation',
         prefixIcon: const Icon(Icons.assignment_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: _evaluationTypes
-          .map((type) => DropdownMenuItem(
-                value: type,
-                child: Text(type),
-              ))
+          .map((type) => DropdownMenuItem(value: type, child: Text(type)))
           .toList(),
       onChanged: (value) {
         setState(() {
@@ -543,10 +571,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
         decoration: InputDecoration(
           labelText: 'Date de l\'évaluation',
           prefixIcon: const Icon(Icons.calendar_today_outlined),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         child: Text(
           '${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}',
@@ -563,10 +592,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       decoration: InputDecoration(
         labelText: 'Note (0-20)',
         prefixIcon: const Icon(Icons.assignment_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         suffixText: '/20',
       ),
       validator: (value) {
@@ -589,10 +619,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       decoration: InputDecoration(
         labelText: 'Coeff',
         prefixIcon: const Icon(Icons.scale_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -614,10 +645,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       decoration: InputDecoration(
         labelText: 'Commentaires (facultatif)',
         prefixIcon: const Icon(Icons.comment_outlined),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }
@@ -656,8 +688,8 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                   Text(
                     'Enregistrement en cours...',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -676,7 +708,9 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       note: double.parse(_noteController.text),
       coefficient: double.parse(_coefficientController.text),
       date: _selectedDate,
-      commentaire: _commentController.text.isEmpty ? null : _commentController.text,
+      commentaire: _commentController.text.isEmpty
+          ? null
+          : _commentController.text,
     );
 
     final success = await _controller.addGradeEntry(gradeEntry);
@@ -691,7 +725,9 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -714,15 +750,15 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                 Text(
                   'Note enregistrée!',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '${_selectedMatiere} - ${_noteController.text}/20',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -768,7 +804,9 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       showDialog(
         context: context,
         builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -791,15 +829,15 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                 Text(
                   'Erreur!',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Impossible d\'enregistrer la note',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -829,4 +867,11 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       );
     }
   }
+}
+
+class _StudentOption {
+  final String id;
+  final String name;
+
+  const _StudentOption({required this.id, required this.name});
 }

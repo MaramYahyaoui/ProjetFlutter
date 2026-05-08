@@ -53,7 +53,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
               stream: FirebaseFirestore.instance
                   .collection('notifications')
                   .where('userId', isEqualTo: uid)
-                  .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -70,10 +69,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
                 final notifs = snapshot.data!.docs
                     .map(_AppNotification.fromDoc)
-                    .toList(growable: false);
+                    .toList();
 
-                final unreadCount =
-                    notifs.where((n) => !n.isRead).length;
+                notifs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                final unreadCount = notifs.where((n) => !n.isRead).length;
 
                 final filtered = switch (_filter) {
                   _NotifFilter.all => notifs,
@@ -91,7 +91,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           _SegmentButton(
                             label: 'Toutes',
                             selected: _filter == _NotifFilter.all,
-                            onTap: () => setState(() => _filter = _NotifFilter.all),
+                            onTap: () =>
+                                setState(() => _filter = _NotifFilter.all),
                           ),
                           const SizedBox(width: 10),
                           _SegmentButton(
@@ -125,12 +126,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           : ListView.separated(
                               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                               itemCount: filtered.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final n = filtered[index];
                                 return _NotificationCard(
                                   notification: n,
-                                  onTap: () => _markRead(n),
+                                  onTap: () => _handleNotificationTap(n),
                                 );
                               },
                             ),
@@ -155,6 +157,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Future<void> _handleNotificationTap(_AppNotification notification) async {
+    await _markRead(notification);
+
+    if (!mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _NotificationDetailsPage(notification: notification),
+      ),
+    );
+  }
+
   Future<void> _markAllRead(String uid, List<_AppNotification> notifs) async {
     final unread = notifs.where((n) => !n.isRead).toList(growable: false);
     if (unread.isEmpty) return;
@@ -162,9 +176,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
     try {
       final batch = FirebaseFirestore.instance.batch();
       for (final n in unread) {
-        final ref =
-            FirebaseFirestore.instance.collection('notifications').doc(n.id);
-        batch.update(ref, {'read': true, 'updatedAt': FieldValue.serverTimestamp()});
+        final ref = FirebaseFirestore.instance
+            .collection('notifications')
+            .doc(n.id);
+        batch.update(ref, {
+          'read': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       }
       await batch.commit();
     } catch (_) {
@@ -205,17 +223,16 @@ class _SegmentButton extends StatelessWidget {
           children: [
             Text(
               label,
-              style: TextStyle(
-                color: fg,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: fg, fontWeight: FontWeight.w700),
             ),
             if (badge != null) ...[
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: selected ? Colors.white.withOpacity(0.25) : Colors.white,
+                  color: selected
+                      ? Colors.white.withOpacity(0.25)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -239,10 +256,7 @@ class _NotificationCard extends StatelessWidget {
   final _AppNotification notification;
   final VoidCallback onTap;
 
-  const _NotificationCard({
-    required this.notification,
-    required this.onTap,
-  });
+  const _NotificationCard({required this.notification, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -421,10 +435,16 @@ class _AppNotification {
     required this.isRead,
   });
 
-  static _AppNotification fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+  static _AppNotification fromDoc(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data();
-    final title = (data['title'] as String?) ?? (data['titre'] as String?) ?? 'Notification';
-    final body = (data['body'] as String?) ??
+    final title =
+        (data['title'] as String?) ??
+        (data['titre'] as String?) ??
+        'Notification';
+    final body =
+        (data['body'] as String?) ??
         (data['message'] as String?) ??
         (data['contenu'] as String?) ??
         '';
@@ -484,5 +504,120 @@ class _CenteredMessage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _NotificationDetailsPage extends StatelessWidget {
+  final _AppNotification notification;
+
+  const _NotificationDetailsPage({required this.notification});
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = _NotificationVisual.fromType(notification.type);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Détail notification')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: visual.bg,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(visual.icon, color: visual.fg),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            notification.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _formatDateTime(notification.createdAt),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Text(
+                  notification.body,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime date) {
+    const months = [
+      '',
+      'janv.',
+      'févr.',
+      'mars',
+      'avr.',
+      'mai',
+      'juin',
+      'juil.',
+      'août',
+      'sept.',
+      'oct.',
+      'nov.',
+      'déc.',
+    ];
+
+    final dd = date.day;
+    final mm = months[date.month];
+    final hh = date.hour.toString().padLeft(2, '0');
+    final min = date.minute.toString().padLeft(2, '0');
+    return '$dd $mm, $hh:$min';
   }
 }

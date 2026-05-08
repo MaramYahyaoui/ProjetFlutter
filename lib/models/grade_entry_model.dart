@@ -27,7 +27,7 @@ class GradeEntry extends Equatable {
   /// Convertit depuis un document Firestore
   factory GradeEntry.fromFirestore(Map<String, dynamic> data, String id) {
     DateTime dateValue = DateTime.now();
-    
+
     // Handle Firestore Timestamp conversion
     final dateField = data['date'];
     if (dateField is Timestamp) {
@@ -35,7 +35,7 @@ class GradeEntry extends Equatable {
     } else if (dateField is DateTime) {
       dateValue = dateField;
     }
-    
+
     return GradeEntry(
       id: id,
       profId: (data['profId'] as String?) ?? '',
@@ -103,29 +103,38 @@ class GradeEntry extends Equatable {
 
 class GradeStatistics extends Equatable {
   final double average;
+  final double median; // Note médiane
   final double successRate; // 0-100
   final int evaluationCount;
   final int studentCount;
   final double minScore;
   final double maxScore;
+  final Map<String, int>
+  scoreDistribution; // Répartition par plage: {"0-5": 2, "5-10": 4, ...}
+  final List<double> allScores; // Toutes les notes pour calculs futurs
 
   const GradeStatistics({
     required this.average,
+    required this.median,
     required this.successRate,
     required this.evaluationCount,
     required this.studentCount,
     required this.minScore,
     required this.maxScore,
+    this.scoreDistribution = const {},
+    this.allScores = const [],
   });
 
   @override
   List<Object?> get props => [
     average,
+    median,
     successRate,
     evaluationCount,
     studentCount,
     minScore,
     maxScore,
+    scoreDistribution,
+    allScores,
   ];
 }
-

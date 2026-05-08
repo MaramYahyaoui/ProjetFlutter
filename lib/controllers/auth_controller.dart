@@ -15,11 +15,9 @@ class AuthController extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  AuthController({
-    FirebaseService? firebaseService,
-    fauth.FirebaseAuth? auth,
-  })  : _firebaseService = firebaseService ?? FirebaseService(),
-        _auth = auth ?? fauth.FirebaseAuth.instance {
+  AuthController({FirebaseService? firebaseService, fauth.FirebaseAuth? auth})
+    : _firebaseService = firebaseService ?? FirebaseService(),
+      _auth = auth ?? fauth.FirebaseAuth.instance {
     // Vérifie l'état d'authentification au démarrage
     _initAuthState();
   }
@@ -61,7 +59,6 @@ class AuthController extends ChangeNotifier {
     final firebaseUser = _auth.currentUser;
 
     if (firebaseUser != null) {
-      
       _setLoading(true);
       checkAuthState();
     } else {
@@ -73,7 +70,7 @@ class AuthController extends ChangeNotifier {
   /// Vérifie manuellement l'état de l'authentification
   Future<void> checkAuthState() async {
     _setLoading(true);
-    
+
     try {
       final firebaseUser = _auth.currentUser;
 
@@ -91,7 +88,11 @@ class AuthController extends ChangeNotifier {
 
   /// Connecte l'utilisateur avec email et password
   /// Retourne true si succès, false sinon
-  Future<bool> login(String email, String password, {String? expectedRole}) async {
+  Future<bool> login(
+    String email,
+    String password, {
+    String? expectedRole,
+  }) async {
     _setLoading(true);
     _clearError();
 
@@ -178,6 +179,44 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       _setError('Erreur: ${e.toString()}');
       if (kDebugMode) debugPrint('Reset password error: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Change le mot de passe de l'utilisateur connecté.
+  /// Firebase exige une ré-authentification avant la mise à jour sensible.
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final firebaseUser = _auth.currentUser;
+      final email = firebaseUser?.email;
+
+      if (firebaseUser == null || email == null || email.isEmpty) {
+        _setError('Utilisateur non connecté');
+        return false;
+      }
+
+      final credential = fauth.EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword.trim(),
+      );
+
+      await firebaseUser.reauthenticateWithCredential(credential);
+      await firebaseUser.updatePassword(newPassword.trim());
+      return true;
+    } on fauth.FirebaseAuthException catch (e) {
+      _handleFirebaseAuthError(e);
+      return false;
+    } catch (e) {
+      _setError('Erreur lors du changement du mot de passe: ${e.toString()}');
+      if (kDebugMode) debugPrint('Change password error: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -304,9 +343,13 @@ class AuthController extends ChangeNotifier {
       case 'network-request-failed':
         message = 'Erreur réseau. Vérifiez votre connexion';
         break;
+      case 'requires-recent-login':
+        message = 'Veuillez vous reconnecter puis réessayer';
+        break;
       default:
         message = 'Erreur: ${e.code}';
-        if (kDebugMode) debugPrint('Firebase Auth Error: ${e.code} - ${e.message}');
+        if (kDebugMode)
+          debugPrint('Firebase Auth Error: ${e.code} - ${e.message}');
     }
 
     _setError(message);

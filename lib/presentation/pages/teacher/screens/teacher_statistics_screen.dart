@@ -6,7 +6,8 @@ class TeacherStatisticsScreen extends StatefulWidget {
   const TeacherStatisticsScreen({super.key});
 
   @override
-  State<TeacherStatisticsScreen> createState() => _TeacherStatisticsScreenState();
+  State<TeacherStatisticsScreen> createState() =>
+      _TeacherStatisticsScreenState();
 }
 
 class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
@@ -15,10 +16,7 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Statistiques'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Statistiques'), elevation: 0),
       body: Consumer<TeacherController>(
         builder: (context, controller, _) {
           if (controller.classes.isEmpty) {
@@ -45,12 +43,12 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
           }
 
           // Set default class if not selected
-          _selectedClassId ??= controller.classes.isNotEmpty ? controller.classes.first : null;
+          _selectedClassId ??= controller.classes.isNotEmpty
+              ? controller.classes.first
+              : null;
 
           if (_selectedClassId == null) {
-            return const Center(
-              child: Text('Aucune classe disponible'),
-            );
+            return const Center(child: Text('Aucune classe disponible'));
           }
 
           final stats = controller.currentClassStatistics;
@@ -71,10 +69,12 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
                     ),
                   ),
                   items: controller.classes
-                      .map((className) => DropdownMenuItem(
-                            value: className,
-                            child: Text(className),
-                          ))
+                      .map(
+                        (className) => DropdownMenuItem(
+                          value: className,
+                          child: Text(className),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) async {
                     if (value != null) {
@@ -90,10 +90,9 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
                 // Key statistics
                 Text(
                   'Informations sur $_selectedClassId',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
 
@@ -117,11 +116,36 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
                       Expanded(
                         child: _buildStatCard(
                           context,
+                          icon: Icons.show_chart,
+                          value: stats.median.toStringAsFixed(2),
+                          label: 'Médiane',
+                          color: Colors.teal,
+                          suffix: '/20',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          context,
                           icon: Icons.check_circle,
                           value: stats.successRate.toStringAsFixed(1),
                           label: 'Taux réussite',
                           color: Colors.green,
                           suffix: '%',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          context,
+                          icon: Icons.people,
+                          value: stats.studentCount.toString(),
+                          label: 'Élèves',
+                          color: Colors.purple,
                         ),
                       ),
                     ],
@@ -133,19 +157,21 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
                         child: _buildStatCard(
                           context,
                           icon: Icons.assessment,
-                          value: stats.evaluationCount.toString(),
-                          label: 'Évaluations',
-                          color: Colors.blue,
+                          value: stats.minScore.toStringAsFixed(1),
+                          label: 'Note min',
+                          color: Colors.red,
+                          suffix: '/20',
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCard(
                           context,
-                          icon: Icons.people,
-                          value: stats.studentCount.toString(),
-                          label: 'Élèves',
-                          color: Colors.purple,
+                          icon: Icons.star,
+                          value: stats.maxScore.toStringAsFixed(1),
+                          label: 'Note max',
+                          color: Colors.amber,
+                          suffix: '/20',
                         ),
                       ),
                     ],
@@ -197,9 +223,9 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
                 TextSpan(
                   text: value,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                 ),
                 TextSpan(
                   text: suffix,
@@ -209,17 +235,22 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
   }
 
-  Widget _buildScoreDistribution(
-      BuildContext context, stats) {
+  Widget _buildScoreDistribution(BuildContext context, stats) {
+    // Map des couleurs et des données réelles
+    final distributionData = [
+      ('0-5', stats.scoreDistribution['0-5'] ?? 0, Colors.red),
+      ('5-10', stats.scoreDistribution['5-10'] ?? 0, Colors.orange),
+      ('10-14', stats.scoreDistribution['10-14'] ?? 0, Colors.yellow),
+      ('14-17', stats.scoreDistribution['14-17'] ?? 0, Colors.lightGreen),
+      ('17-20', stats.scoreDistribution['17-20'] ?? 0, Colors.green),
+    ];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -232,67 +263,50 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
         children: [
           Text(
             'Répartition des notes',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildScoreRangeCard(
-                context,
-                '0-5',
-                Colors.red,
-              ),
-              _buildScoreRangeCard(
-                context,
-                '5-10',
-                Colors.orange,
-              ),
-              _buildScoreRangeCard(
-                context,
-                '10-14',
-                Colors.yellow,
-              ),
-              _buildScoreRangeCard(
-                context,
-                '16-20',
-                Colors.green,
-              ),
-            ],
+            children: distributionData.map((data) {
+              return _buildScoreRangeCard(context, data.$1, data.$3, data.$2);
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildScoreRangeCard(BuildContext context, String range, Color color) {
+  Widget _buildScoreRangeCard(
+    BuildContext context,
+    String range,
+    Color color,
+    int count,
+  ) {
     return Column(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             color: color.withOpacity(0.2),
             shape: BoxShape.circle,
           ),
           child: Center(
             child: Text(
-              '4',
+              count.toString(),
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
             ),
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          range,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        Text(range, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
@@ -310,18 +324,15 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
         children: [
           Text(
             'Évolution de la moyenne',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           // Fake chart for now
           SizedBox(
             height: 200,
-            child: CustomPaint(
-              painter: LineChartPainter(),
-            ),
+            child: CustomPaint(painter: LineChartPainter()),
           ),
         ],
       ),
@@ -329,7 +340,25 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
   }
 
   Widget _buildTopPerformers(
-      BuildContext context, TeacherController controller, selectedClass) {
+    BuildContext context,
+    TeacherController controller,
+    selectedClass,
+  ) {
+    // Récupérer les élèves avec leurs meilleures notes moyennes
+    final gradesByStudent = <String, List<double>>{};
+    for (final grade in controller.gradeEntries) {
+      gradesByStudent.putIfAbsent(grade.eleveId, () => []).add(grade.note);
+    }
+
+    // Calculer la moyenne par élève et trier
+    final studentAverages = gradesByStudent.entries.map((e) {
+      final avg = e.value.reduce((a, b) => a + b) / e.value.length;
+      return (eleveId: e.key, average: avg);
+    }).toList()..sort((a, b) => b.average.compareTo(a.average));
+
+    // Prendre les top 3
+    final topPerformers = studentAverages.take(3).toList();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -342,43 +371,55 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
         children: [
           Text(
             'Meilleures performances',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          // Example top performers
-          _buildPerformerRow(
-            context,
-            1,
-            'Emma Bernard',
-            '17.5',
-            Colors.yellow,
-          ),
-          const SizedBox(height: 12),
-          _buildPerformerRow(
-            context,
-            2,
-            'Marie Dubois',
-            '16.8',
-            Colors.grey,
-          ),
-          const SizedBox(height: 12),
-          _buildPerformerRow(
-            context,
-            3,
-            'Lucas Martin',
-            '15.2',
-            Colors.orange,
-          ),
+          if (topPerformers.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Aucune donnée disponible',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            )
+          else
+            Column(
+              children: List.generate(topPerformers.length, (index) {
+                final performer = topPerformers[index];
+                final medalColor = index == 0
+                    ? Colors.yellow
+                    : index == 1
+                    ? Colors.grey
+                    : Colors.orange;
+                return Column(
+                  children: [
+                    _buildPerformerRow(
+                      context,
+                      index + 1,
+                      performer.eleveId, // ID élève pour maintenant
+                      performer.average.toStringAsFixed(2),
+                      medalColor,
+                    ),
+                    if (index < topPerformers.length - 1)
+                      const SizedBox(height: 12),
+                  ],
+                );
+              }),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildPerformerRow(BuildContext context, int position, String name,
-      String score, Color color) {
+  Widget _buildPerformerRow(
+    BuildContext context,
+    int position,
+    String name,
+    String score,
+    Color color,
+  ) {
     return Row(
       children: [
         Container(
@@ -391,25 +432,19 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
           child: Center(
             child: Text(
               position.toString(),
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
             ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            name,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          child: Text(name, style: Theme.of(context).textTheme.bodyMedium),
         ),
         Text(
           score,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );

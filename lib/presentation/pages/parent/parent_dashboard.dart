@@ -7,9 +7,11 @@ import '../../../controllers/auth_controller.dart';
 import '../../../controllers/student_controller.dart';
 import '../../../controllers/theme_controller.dart';
 import '../../../core/services/firebase_service.dart';
+import '../notifications/notifications_page.dart';
 import '../student/screens/notes_page.dart';
 import '../student/screens/schedule_page.dart';
 import '../messages/conversations_page.dart';
+import '../../widgets/notification_bell_button.dart';
 import '../../widgets/user_profile_image_picker.dart';
 import '../../widgets/recent_messages_preview.dart';
 
@@ -428,29 +430,12 @@ class _ParentHeaderCard extends StatelessWidget {
                         color: Colors.white.withOpacity(0.18),
                         shape: BoxShape.circle,
                       ),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          const Center(
-                            child: Icon(
-                              Icons.notifications_none_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                          Positioned(
-                            top: 6,
-                            right: 5,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: const Center(
+                        child: NotificationBellButton(
+                          iconColor: Colors.white,
+                          iconSize: 20,
+                          dense: true,
+                        ),
                       ),
                     ),
                   ],
@@ -1092,13 +1077,9 @@ class _ParentMenuTab extends StatelessWidget {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.notifications_outlined,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                    onPressed: () {},
+                                  const NotificationBellButton(
+                                    iconColor: Colors.white,
+                                    iconSize: 24,
                                   ),
                                 ],
                               ),
@@ -1268,7 +1249,13 @@ class _ParentMenuTab extends StatelessWidget {
                           icon: Icons.notifications_outlined,
                           label: 'Notifications',
                           color: const Color(0xFF09C15C),
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsPage(),
+                              ),
+                            );
+                          },
                         ),
                         _buildDivider(),
                         _buildMenuOption(

@@ -10,6 +10,7 @@ import '../screens/homework_page.dart';
 import '../screens/profile_page.dart';
 import '../../notifications/notifications_page.dart';
 import '../../messages/conversations_page.dart';
+import '../../../widgets/notification_bell_button.dart';
 import '../../../widgets/recent_messages_preview.dart';
 
 class StudentDashboard extends StatefulWidget {
@@ -249,48 +250,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             ),
                           ],
                         ),
-                        Stack(
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const NotificationsPage(),
-                                  ),
-                                );
-                              },
-                            ),
-                            if (pendingHomeworks.isNotEmpty)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    minWidth: 18,
-                                    minHeight: 18,
-                                  ),
-                                  child: Text(
-                                    '${pendingHomeworks.length}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        const NotificationBellButton(
+                          iconColor: Colors.white,
+                          iconSize: 28,
                         ),
                       ],
                     ),

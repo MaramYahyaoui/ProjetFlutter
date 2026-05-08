@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 
 import 'add_user_page.dart';
-import '../../notifications/notifications_page.dart';
+import '../../../widgets/notification_bell_button.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
@@ -45,18 +45,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_outlined,
-              color: Colors.black87,
-            ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const NotificationsPage(),
-                ),
-              );
-            },
+          const NotificationBellButton(
+            iconColor: Colors.black87,
+            iconSize: 24,
+            dense: true,
           ),
           const SizedBox(width: 4),
         ],
@@ -337,9 +329,7 @@ class _UserTile extends StatelessWidget {
             CircleAvatar(
               radius: 22,
               backgroundImage: MemoryImage(
-                base64Decode(
-                  user.photoPath!.split(',').last,
-                ),
+                base64Decode(user.photoPath!.split(',').last),
               ),
             )
           else

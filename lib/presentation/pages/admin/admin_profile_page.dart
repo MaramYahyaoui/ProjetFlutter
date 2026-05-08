@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/theme_controller.dart';
 import '../../../../core/services/firebase_service.dart';
+import '../../widgets/notification_bell_button.dart';
 import '../../widgets/user_profile_image_picker.dart';
 import 'notes/admin_notes_page.dart';
+import 'notifications/admin_create_notification_page.dart';
 import 'parents/admin_parents_page.dart';
 
 class AdminProfilePage extends StatelessWidget {
@@ -126,13 +128,24 @@ class AdminProfilePage extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Profil Admin',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        'Profil Admin',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    NotificationBellButton(
+                                      iconColor: Colors.white,
+                                      iconSize: 24,
+                                      dense: true,
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 18),
                                 _buildProfileImagePicker(context),
@@ -219,7 +232,14 @@ class AdminProfilePage extends StatelessWidget {
                         _SettingsTile(
                           icon: Icons.notifications_outlined,
                           title: 'Notifications',
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const AdminCreateNotificationPage(),
+                              ),
+                            );
+                          },
                         ),
                         _SettingsDivider(),
                         _SettingsTile(
